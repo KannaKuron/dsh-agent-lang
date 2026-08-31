@@ -71,16 +71,34 @@ window.__ModuleLoader__.load({
 			{ value: "th", label: "ไทย (th)" },
 		];
 
-		/** One channel's force-language options: a stored custom tag first
-		 *  (so a saved value is always visible), then the common list. */
-		function langOptions(current) {
+		/** One channel's force-language options, three tiers (dedup, first
+		 * wins): 1. the stored custom tag (a saved value stays visible);
+		 * 2. every REGISTERED language — locale packs added via
+		 * ctx.locale.addLanguage (dsh-i18n & friends) surface here
+		 * automatically and lead the list; with no pack installed this tier
+		 * is just the built-in zh/en; 3. the static LANG_OPTIONS fallback. */
+		function langOptions(current, selectable) {
 			var opts = [];
+			var seen = {};
 			if (typeof current === "string" && current !== "") {
 				opts.push({ value: current, label: current + " (current)" });
+				seen[current.toLowerCase()] = true;
 			}
-			for (var i = 0; i < LANG_OPTIONS.length; i++) {
-				var o = LANG_OPTIONS[i];
-				if (o.value === current) continue;
+			if (selectable && selectable.length) {
+				for (var i = 0; i < selectable.length; i++) {
+					var def = selectable[i] || {};
+					if (typeof def.id !== "string" || def.id === "") continue;
+					var key = def.id.toLowerCase();
+					if (seen[key]) continue;
+					seen[key] = true;
+					var name = typeof def.label === "string" && def.label ? def.label : def.id;
+					opts.push({ value: def.id, label: name + " (" + def.id + ")" });
+				}
+			}
+			for (var j = 0; j < LANG_OPTIONS.length; j++) {
+				var o = LANG_OPTIONS[j];
+				if (seen[o.value.toLowerCase()]) continue;
+				seen[o.value.toLowerCase()] = true;
 				opts.push(o);
 			}
 			return opts;
@@ -341,6 +359,15 @@ window.__ModuleLoader__.load({
 				return (self || '"' + effective + '"') + " (" + effective + ")";
 			}
 
+			// Live language-registry feed from the inject factory; absent feeds
+			// degrade to the static fallback list.
+			function selectableLocales() {
+				if (typeof props.selectableLocales === "function") {
+					try { return props.selectableLocales() || []; } catch (error) { return []; }
+				}
+				return [];
+			}
+
 			var channels = [
 				{ key: "desc", label: t("chan.desc"), modeKey: "mode", localeKey: "forceLocale", m: mode, loc: value.forceLocale },
 				{ key: "think", label: t("chan.think"), modeKey: "thinkMode", localeKey: "thinkLocale", m: value.thinkMode || "off", loc: value.thinkLocale },
@@ -397,7 +424,7 @@ window.__ModuleLoader__.load({
 								},
 							}),
 							E("datalist", { id: "dl-lang-" + ch.key },
-								langOptions(ch.loc).map(function (opt) {
+								langOptions(ch.loc, selectableLocales()).map(function (opt) {
 									return E("option", { key: opt.value, value: opt.value, label: opt.label }, null);
 								})
 							),
@@ -536,7 +563,17 @@ window.__ModuleLoader__.load({
 						// here as PLAIN members (top-level options fields do NOT
 						// reach the component).
 						inject: function () {
-							return { scope: scope, localeScope: localeScope };
+							return {
+								scope: scope,
+								localeScope: localeScope,
+								selectableLocales: function () {
+									try {
+										return ctx.locale.getSnapshot().locales || [];
+									} catch (error) {
+										return [];
+									}
+								},
+							};
 						},
 					}, function CardWithBoundary(props) {
 						return E(QuietBoundary, null, E(DescLangCard, props));

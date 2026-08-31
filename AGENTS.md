@@ -37,6 +37,7 @@
 9. **context order 125** 是自由槽位,排在官方 CONTEXT_ORDERS(SANDBOX_POLICY 110 / APPROVAL_POLICY 115 / SUBAGENT_DELEGATION 120)之后;若官方表扩张越过 125,换一个空闲数。
 10. **slot 注册 options 的顶层字段不会传给组件**(2026-08-31 实测:首版把 scope/localeScope 放顶层,组件 props.scope 为 undefined,useSyncExternalStore(undefined.subscribe) 渲染即崩,卡片无声消失而上报链路照常)。只有协议字段生效:`locale` 绑 t、`store` 绑 store seat、**`inject` 工厂返回的成员按原名成为 props**(hooks 子对象绑成 useXxx)。传对象一律走 inject 工厂;组件外再包 QuietBoundary(渲染失败只废本卡)。对照范本:已安装的 dsh-better-workspace 0.6.0(sandbox 里的开发副本可能滞后,以 profile node_modules 里实际装的版本为准)。
 11. **host 半读未声明服务必须 `ctx.get('name')`**:`ctx.inject(['systemPrompt'], (pctx) => ...)` 的 pctx 只有声明过的服务可作属性访问,`pctx.settings?.get?.(...)` 这种未声明属性读取**静默 undefined**(可选链连错都不报),指示因此永远空文本(2026-08-31 实测:卡片/上报全正常但指示从未注入,agent 描述依旧英文)。测试已锁定 `pctx.get('settings')` 形态。
+12. **强制语言下拉选项三来源、去重优先级递减**(v0.4.1):已存自定义 tag(保可见)> **locale 快照的已注册语言**(`ctx.locale.getSnapshot().locales`,经 inject 工厂 `selectableLocales` 喂入组件;任何语言包插件经 `ctx.locale.addLanguage` 注册的语言——如 dsh-i18n——**自然并入并置前,无需本插件感知具体包**)> 静态 LANG_OPTIONS 兜底(未装任何包时依旧可用)。feed 缺失/异常一律降级为静态列表;选项 label 用语言包自带 label(缺失回退 id)。
 
 ## 验证清单(改动后)
 

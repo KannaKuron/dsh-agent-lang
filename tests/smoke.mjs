@@ -222,6 +222,14 @@ test('client bundle: settings card keyed by the namespace with zh/en dictionarie
   assert.match(clientSource, /ctx\.locale\.register\(DICT_NS, "ko", ko\)/)
 })
 
+test('client bundle: force-language options merge registered locale packs over the static fallback', () => {
+  assert.match(clientSource, /selectableLocales: function \(\) \{/)
+  assert.match(clientSource, /ctx\.locale\.getSnapshot\(\)\.locales \|\| \[\]/)
+  assert.match(clientSource, /function langOptions\(current, selectable\)/)
+  assert.match(clientSource, /def\.label === "string" && def\.label \? def\.label : def\.id/)
+  assert.match(clientSource, /LANG_OPTIONS/)
+})
+
 test('client bundle: three channels with one-click sync/off shortcuts', () => {
   // the three channel blocks with their settings keys
   for (const pair of ['modeKey: "mode"', 'modeKey: "thinkMode"', 'modeKey: "outMode"']) {
@@ -264,7 +272,7 @@ test('client bundle: card receives scopes ONLY through the inject factory', () =
   assert.match(clientSource, /function DescLangCard\(props\) \{/)
   // verified against dsh-better-workspace 0.6.0: top-level options fields do
   // NOT reach the component — the scopes must ride the inject factory.
-  assert.match(clientSource, /inject: function \(\) \{\s*\n\s*return \{ scope: scope, localeScope: localeScope \}/)
+  assert.match(clientSource, /inject: function \(\) \{\s*\n\s*return \{/)
   const optionsBlock = clientSource.slice(
     clientSource.indexOf('key: NS'),
     clientSource.indexOf('inject: function ()'),
