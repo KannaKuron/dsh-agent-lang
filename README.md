@@ -1,5 +1,7 @@
 # dsh-desc-lang
 
+简体中文 | [English](README_EN.md) | [日本語](README_JA.md) | [한국어](README_KO.md)
+
 [![Awesome DSH Plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
 
 > 工具调用的描述跟随界面语言 —— 让 [DeepSeek Harness (DSH)](https://www.npmjs.com/package/@deepseek-ai/dsh) 里每个工具调用的 `description`(包括 PTC 模式 `run_code` 的 `description`,也就是工具卡片标题)自动用**你界面正在显示的语言**书写,而不是永远英文。

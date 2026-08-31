@@ -36,6 +36,8 @@
     "dsh.plugin.json",
     "README.md",
     "README_EN.md",
+    "README_JA.md",
+    "README_KO.md",
     "LICENSE"
   ],
   "scripts": {

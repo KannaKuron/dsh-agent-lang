@@ -169,9 +169,8 @@ export function buildLanguageDirective(lang) {
   if (typeof lang !== 'string' || lang.length === 0) return ''
   if (lang.toLowerCase() === 'en') return ''
   const selfName = languageSelfName(lang)
-  return `Tool-call description language: the user's web GUI display language is ${selfName} (${lang}). `
-    + 'Every `description` argument on a tool call — including the `description` parameter of `run_code` programs in PTC mode — is that call’s user-facing label in the UI, and must be written in ' + selfName + ', not in English; the English wording and examples inside tool schemas are format guidance only. '
-    + 'Keep each description a short, specific, active-voice phrase in its natural form in that language; code identifiers, file paths, commands, and other technical tokens may stay in their original script inside the translated phrase.'
+  return `Tool-call descriptions must be written in ${selfName} (${lang}) — the user's web GUI display language — not in English; this includes run_code's \`description\` in PTC mode, and the English wording and examples inside tool schemas are format guidance only. `
+    + 'Keep each description short and specific; code identifiers, file paths, and commands stay in their original script.'
 }
 
 /** Test surface: constants and pure helpers for helper-level tests. */

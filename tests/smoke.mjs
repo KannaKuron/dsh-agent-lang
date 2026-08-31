@@ -162,9 +162,11 @@ test('client bundle: settings card keyed by the namespace with zh/en dictionarie
   assert.match(clientSource, /settings\.plugin\.item/)
   assert.match(clientSource, /key: NS/)
   assert.match(clientSource, /ctx\.locale\.register\(DICT_NS, \{ zh: zh, en: en \}\)/)
+  assert.match(clientSource, /ctx\.locale\.register\(DICT_NS, "ja", ja\)/)
+  assert.match(clientSource, /ctx\.locale\.register\(DICT_NS, "ko", ko\)/)
 })
 
-test('client bundle: zh/en dictionary keys stay aligned', () => {
+test('client bundle: zh/en/ja/ko dictionary keys stay aligned', () => {
   function keys(objectLiteralName) {
     const start = clientSource.indexOf('var ' + objectLiteralName + ' = {')
     assert.ok(start >= 0, objectLiteralName + ' not found')
@@ -183,9 +185,10 @@ test('client bundle: zh/en dictionary keys stay aligned', () => {
     return new Set([...body.matchAll(/"([a-zA-Z][a-zA-Z0-9.]*)":/g)].map((m) => m[1]))
   }
   const zhKeys = keys('zh')
-  const enKeys = keys('en')
   assert.ok(zhKeys.size > 0)
-  assert.deepEqual([...zhKeys].sort(), [...enKeys].sort())
+  for (const other of ['en', 'ja', 'ko']) {
+    assert.deepEqual([...keys(other)].sort(), [...zhKeys].sort(), other + ' dictionary keys drift from zh')
+  }
 })
 
 test('client bundle: card receives scopes ONLY through the inject factory', () => {

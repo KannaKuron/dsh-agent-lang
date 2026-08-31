@@ -1,0 +1,57 @@
+# dsh-desc-lang
+
+[简体中文](README.md) | [English](README_EN.md) | [日本語](README_JA.md) | 한국어
+
+[![Awesome DSH Plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
+
+> 도구 호출 description을 GUI 언어로 —— [DeepSeek Harness (DSH)](https://www.npmjs.com/package/@deepseek-ai/dsh)의 모든 도구 호출 `description`(PTC 모드의 `run_code` `description`, 즉 호출 카드 제목 포함)이 **웹 GUI가 실제 표시하는 언어**로 작성되게 합니다. 항상 영어가 아니라.
+
+## 왜 필요한가
+
+DSH의 도구 호출에는 필수 `description` 인자가 있으며, 그대로 UI의 호출 카드 라벨로 표시됩니다. 그런데 도구 스키마에서 이 필드를 설명하는 문구와 예시는 모두 영어("5-10 words … Examples: 'Count TODO markers…'")라서, GUI 언어와 무관하게 모델은 늘 영어로 쓰게 됩니다.
+
+이 플러그인은 **프롬프트 쪽만** 변경합니다. 전역 동적 runtime-context 지시문 하나를 등록해 현재 GUI 표시 언어를 알려주고, 모든 도구 호출 description을 그 언어로 쓰도록 지시합니다. preset·persona·도구 스키마는 전혀 수정하지 않습니다(업그레이드가 덮어쓰는 배포 자산이기 때문입니다).
+
+## 지원 범위
+
+| 모드 / preset | 지원 | 비고 |
+|---|---|---|
+| `standard` | ✅ | |
+| `ptc`(구명 `code`) | ✅ | `run_code`의 `description` 포함 |
+| `cordis`(Creation 모드) | ✅ | |
+| 사용자 preset(`ptc-cordis`, dsh-gitbash-shell의 gitbash 계열 포함) | ✅ | 호스트 면 등록으로, 봉인되지 않은 모든 preset에 적용 |
+| `minimal` | ❌(설계상) | minimal은 complete persona를 쓰고 runtime context를 억제해 프롬프트가 완전히 봉인되어 있습니다. 프롬프트 수준 플러그인으로는 진입할 수 없습니다 |
+
+## 동작 원리
+
+- **감지 순서**(auto 모드):설정 → 일반 → 언어의 **명시적 선택** > 브라우저가 보고한 현재 언어. 둘 다 없거나 영어면 → 아무것도 주입하지 않습니다(영어가 원래 기본 동작이라 노이즈를 더하지 않음).
+- **주입 채널**:`systemPrompt.context()` —— 샌드박스/승인 정책과 동일한, 요청마다 재평가되는 runtime-context 스냅샷. 요청 끝부근에 렌더링되어 도구 스키마의 영어 안내를 최신 정보가 덮습니다. GUI 언어 전환은 **다음 요청부터 즉시 반영**됩니다.
+- **설정 카드**:설정 → 플러그인에 이 플러그인의 카드가 나타납니다(호스트 측에서 서비스 중인 설정 네임스페이스와 카드가 자동 페어링). 동작 전환(GUI 언어 따르기 / BCP 47 태그 강제(`zh`, `ja` 등)/ 끄기)과 감지 체인 표시가 가능합니다.
+
+## 설치
+
+```bash
+dsh plugin --profile web add dsh-desc-lang
+```
+
+순수 JS, 빌드 없음, 설치 의존성 없음(schemastery는 peer로 profile 공유 해석). 설치 후 DSH를 재시작하세요.
+
+## 검증
+
+1. 설치 후 DSH 재시작 and **한 번 하드 새로고침**(⌘/Ctrl+Shift+R, 아래 알려진 경계 #1 참조);
+2. `~/.dsh/settings.yaml`에 `desc-lang:` 섹션(`uiLocale`)이 나타남;
+3. minimal 이외 임의 모드에서 새 세션 실행 → 도구 호출 카드의 description이 GUI 언어로 표시됨;
+4. 설정 → 일반 → 언어 전환 → 다음 요청부터 description이 따라감;
+5. 설정 → 플러그인 → 도구 설명 언어 카드에서 동작 전환 테스트.
+
+## 알려진 경계
+
+- **신규 설치/업데이트 후 첫 부팅은 하드 새로고침 한 번 필요**(2026-08-31 실증):첫 페이지 로드가 클라이언트 모듈 테이블 재구성과 겹치면 새 패키지가 일시적으로 제외될 수 있습니다(설정 카드는 안 나오지만 `settings.yaml` 보고는 남음). 하드 새로고침으로 복구. 일반 재시작에서는 재현되지 않습니다.
+- **minimal 모드**:프롬프트가 봉인되어 영향을 받지 않음(위 표 참조).
+- **브라우저 페이지가 없는 경우**(순수 CLI 배포 등):감지 체인은「명시적 선택」뿐. 설정에서 언어를 선택한 적이 없으면 주입하지 않습니다.
+- **다중 브라우저/원격 페이지**:GUI 언어는 전역 단일 값으로, 가장 최근에 열린 페이지의 보고가 우선합니다.
+- 서브에이전트 / workflow 모델에도 같은 지시문이 보입니다(그 description도 UI에 표시되므로 의미상 일관됨).
+
+## 라이선스
+
+MIT

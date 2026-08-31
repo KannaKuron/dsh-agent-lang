@@ -1,5 +1,7 @@
 # dsh-desc-lang
 
+[简体中文](README.md) | English | [日本語](README_JA.md) | [한국어](README_KO.md)
+
 [![Awesome DSH Plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
 
 > Tool-call descriptions in your GUI language — every tool-call `description` in [DeepSeek Harness (DSH)](https://www.npmjs.com/package/@deepseek-ai/dsh), including PTC mode's `run_code` `description` (the call card's title), gets written in the language your web GUI is actually showing, instead of always English.

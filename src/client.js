@@ -92,6 +92,45 @@ window.__ModuleLoader__.load({
 			"hint": "Auto-detection order: the explicit Settings → General → Language choice wins; with no choice ever made, the browser language is followed (reported by this page). A GUI language switch takes effect on the next request. The minimal preset seals its own prompt and is out of scope by design.",
 		};
 
+		// Optional language packs: registered per-locale, inert until a matching
+		// external language definition (ja/ko) is active in the GUI. Keys MUST
+		// stay aligned with zh/en (smoke-enforced across all four).
+		var ja = {
+			"title": "ツール説明言語",
+			"cardDesc": "各ツール呼び出しの description(PTC モードの run_code を含む)をGUIの表示言語で書かせる",
+			"mode": "動作",
+			"mode.auto": "GUI言語に従う",
+			"mode.force": "言語を指定",
+			"mode.off": "オフ",
+			"forceLocale": "言語タグ",
+			"forceLocale.hint": "BCP 47 タグ(zh、ja、zh-Hant など)。空欄の場合はGUI言語に従う",
+			"current": "現在有効",
+			"default": "英語(デフォルト動作。何も注入しません)",
+			"chosen": "設定での明示的な選択",
+			"reported": "ブラウザー報告",
+			"none": "—",
+			"error": "書き込み失敗",
+			"hint": "自動検出の順序:設定 → 全般 → 言語での明示的な選択が優先されます。選択したことがない場合はブラウザー言語に従います(このページが報告)。GUI言語を切り替えると、次のリクエストから反映されます。minimal プリセットはプロンプトが封鎖されているため対象外です。",
+		};
+
+		var ko = {
+			"title": "도구 설명 언어",
+			"cardDesc": "모든 도구 호출의 description(PTC 모드 run_code 포함)를 GUI 표시 언어로 작성",
+			"mode": "동작",
+			"mode.auto": "GUI 언어 따르기",
+			"mode.force": "언어 지정",
+			"mode.off": "끄기",
+			"forceLocale": "언어 태그",
+			"forceLocale.hint": "BCP 47 태그(예: zh, ja, zh-Hant). 비워 두면 GUI 언어를 따름",
+			"current": "현재 적용됨",
+			"default": "영어(기본 동작, 아무것도 주입하지 않음)",
+			"chosen": "설정에서 명시적 선택",
+			"reported": "브라우저 보고",
+			"none": "—",
+			"error": "쓰기 실패",
+			"hint": "자동 감지 순서: 설정 → 일반 → 언어에서 명시적으로 선택한 값이 우선합니다. 선택한 적이 없으면 브라우저 언어를 따릅니다(이 페이지가 보고). GUI 언어를 전환하면 다음 요청부터 적용됩니다. minimal 프리셋은 프롬프트가 폐쇄되어 있어 대상에서 제외됩니다.",
+		};
+
 		/** Language id → self name, mirroring the host half's table. */
 		function selfName(id) {
 			if (typeof id !== "string" || id.length === 0) return undefined;
@@ -386,6 +425,16 @@ window.__ModuleLoader__.load({
 					// plugin withdraws the copy without touching other namespaces.
 					var disposeDict = ctx.locale.register(DICT_NS, { zh: zh, en: en });
 					if (typeof disposeDict === "function") disposers.push(disposeDict);
+					// Optional packs (ja/ko) ride the per-locale form: inert until a
+					// matching external language definition is active in the GUI.
+					try {
+						var disposeJa = ctx.locale.register(DICT_NS, "ja", ja);
+						if (typeof disposeJa === "function") disposers.push(disposeJa);
+					} catch (error) { /* optional pack stays absent */ }
+					try {
+						var disposeKo = ctx.locale.register(DICT_NS, "ko", ko);
+						if (typeof disposeKo === "function") disposers.push(disposeKo);
+					} catch (error) { /* optional pack stays absent */ }
 				} catch (error) {
 					console.warn(TAG + " dictionary registration failed:", error && error.message ? error.message : error);
 				}
