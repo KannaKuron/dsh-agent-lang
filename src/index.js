@@ -254,11 +254,20 @@ export function apply(ctx) {
           order: CONTEXT_ORDER,
           text: () => {
             try {
-              const own = pctx.settings?.get?.(SETTINGS_NAMESPACE) ?? {}
+              // SERVICE READ RULE (learned live, 2026-08-31): this callback's
+              // context declares ONLY 'systemPrompt', so 'pctx.settings' is an
+              // undeclared-property read that silently resolves undefined —
+              // the first version's optional chain then produced '' for every
+              // language and the directive never injected at all. Optional
+              // services must go through ctx.get('name'), which needs no
+              // inject declaration and returns undefined only when the
+              // service is genuinely absent.
+              const settings = pctx.get('settings')
+              const own = settings?.get?.(SETTINGS_NAMESPACE) ?? {}
               // The locale namespace belongs to the built-in plugin; on a
               // deployment without it (no web surface) settings.get resolves
               // undefined and the reported chain carries the language alone.
-              const locale = pctx.settings?.get?.(LOCALE_NAMESPACE)
+              const locale = settings?.get?.(LOCALE_NAMESPACE)
               return buildLanguageDirective(pickDisplayLanguage({
                 mode: own.mode,
                 forceLocale: own.forceLocale,

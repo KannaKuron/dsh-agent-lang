@@ -96,6 +96,15 @@ test('host half: registers a runtime CONTEXT, never a prompt section', () => {
   assert.match(hostSource, new RegExp('name: CONTEXT_NAME'))
 })
 
+test('host half: the directive reads settings via ctx.get, never as an undeclared ctx property', () => {
+  // The context callback's ctx declares ONLY 'systemPrompt'; touching
+  // ctx.settings there silently reads undefined and the directive stays
+  // empty forever (live regression, 2026-08-31).
+  assert.match(hostSource, /pctx\.get\('settings'\)/)
+  // ban the ACCESS form only (the word may appear in explanatory comments)
+  assert.doesNotMatch(hostSource, /pctx\.settings\??\./)
+})
+
 test('host half: namespace schema via dynamic schemastery import, era-probed ns', () => {
   // Dynamic import keeps this file importable by zero-dependency Node tests.
   assert.match(hostSource, /import\('@deepseek-ai\/schemastery'\)/)
