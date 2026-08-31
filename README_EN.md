@@ -22,7 +22,7 @@ This plugin changes only the PROMPT side: one global dynamic runtime-context dir
 
 ## How it works
 
-- **Detection order** (auto mode): the explicit Settings → General → Language choice > the browser-reported active locale; neither, or English → inject nothing (English is already the default behavior).
+- **Detection order** (auto mode): the explicit Settings → General → Language choice > the browser-reported active locale. **English is a regular target too** (v0.3.0+): some models mix languages inside thinking/replies, and an explicit English directive pins them; only a fully undetected language injects nothing.
 - **Channel**: `systemPrompt.context()` — the same per-request runtime-context snapshot as the sandbox/approval policies, rendered near the end of each request so recency beats the English tool-schema guidance. A GUI language switch takes effect on the very next request.
 - **Settings card**: Settings → Plugins pairs Host-served namespaces with registered cards automatically; switch behavior (follow GUI language / force a BCP 47 tag like `zh`, `ja` / off) and inspect the detection chain.
 

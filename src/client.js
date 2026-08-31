@@ -68,6 +68,7 @@ window.__ModuleLoader__.load({
 			"chan.output": "回复输出",
 			"chosen": "设置中的显式选择",
 			"reported": "浏览器上报",
+			"undetected": "未检测到语言(不注入)",
 			"none": "—",
 			"error": "写入失败",
 			"hint": "三个通道独立配置:跟随界面 / 强制指定 / 关闭(思考与回复默认关闭以保持现状)。检测优先级:设置 → 通用 → 语言的显式选择 > 浏览器上报。切换后下一轮请求即生效;minimal 模式提示词封闭,不在范围内。",
@@ -86,6 +87,7 @@ window.__ModuleLoader__.load({
 			"chan.output": "Replies",
 			"chosen": "Explicit choice (Settings → General)",
 			"reported": "Browser report",
+			"undetected": "No language detected (nothing injected)",
 			"none": "—",
 			"error": "Write failed",
 			"hint": "Three independent channels: follow GUI / force a tag / off (thinking and replies default to off, preserving current behavior). Detection order: the explicit Settings → General → Language choice over the browser report. Changes apply on the next request; the minimal preset seals its prompt and is out of scope.",
@@ -106,6 +108,7 @@ window.__ModuleLoader__.load({
 			"chan.output": "回答出力",
 			"chosen": "設定での明示的な選択",
 			"reported": "ブラウザー報告",
+			"undetected": "言語未検出(注入なし)",
 			"none": "—",
 			"error": "書き込み失敗",
 			"hint": "3つのチャネルを独立に設定:GUI言語に従う / 指定 / オフ(思考と回答は現状維持のためデフォルトはオフ)。検出順序:設定 → 全般 → 言語の明示的な選択がブラウザー報告に優先。切り替えは次のリクエストから反映;minimal プリセットはプロンプトが封鎖されているため対象外です。",
@@ -124,6 +127,7 @@ window.__ModuleLoader__.load({
 			"chan.output": "응답 출력",
 			"chosen": "설정에서 명시적 선택",
 			"reported": "브라우저 보고",
+			"undetected": "언어 미감지(주입 없음)",
 			"none": "—",
 			"error": "쓰기 실패",
 			"hint": "세 채널을 독립 설정:GUI 언어 따르기 / 지정 / 끄기(사고와 응답은 현상 유지를 위해 기본 꺼짐). 감지 순서: 설정 → 일반 → 언어의 명시적 선택이 브라우저 보고에 우선. 전환은 다음 요청부터 적용;minimal 프리셋은 프롬프트가 폐쇄되어 있어 대상에서 제외됩니다.",
@@ -293,7 +297,7 @@ window.__ModuleLoader__.load({
 					return t("mode.force");
 				}
 				var effective = chosen || reported;
-				if (!effective) return t("mode.off");
+				if (!effective) return t("undetected");
 				if (effective.toLowerCase() === "en") return "English";
 				var self = selfName(effective);
 				return (self || '"' + effective + '"') + " (" + effective + ")";

@@ -159,19 +159,30 @@ export function languageSelfName(id) {
 }
 
 /**
+ * The ", not in English" override clause — only meaningful when the target
+ * language is NOT English. Since v0.3.0 English is a regular target too:
+ * some models mix languages inside their thinking/replies, so an explicit
+ * English directive pins the language just like any other.
+ * @param {string} lang - resolved language id.
+ * @returns {string} ', not in English' or '' for English itself.
+ */
+function notEnglishClause(lang) {
+  return lang.toLowerCase() === 'en' ? '' : ', not in English'
+}
+
+/**
  * Build the directive text for one language id — one compact paragraph in
  * the runtime-context snapshot style (the snapshot joins entries with blank
- * lines under its own header, so no markdown heading here). Returns '' for
- * English or no language: empty context text is filtered at render, leaving
- * the default English behavior untouched with zero prompt noise.
+ * lines under its own header, so no markdown heading here). Returns '' only
+ * when no language was resolved at all: empty context text is filtered at
+ * render. English yields an explicit directive (anti language-mixing).
  * @param {string | undefined} lang - resolved language id.
  * @returns {string} the context text ('' = contribute nothing).
  */
 export function buildLanguageDirective(lang) {
   if (typeof lang !== 'string' || lang.length === 0) return ''
-  if (lang.toLowerCase() === 'en') return ''
   const selfName = languageSelfName(lang)
-  return `Write tool-call descriptions in ${selfName}, not in English; the English wording in tool schemas is format guidance only, including run_code's \`description\` in PTC mode. `
+  return `Write tool-call descriptions in ${selfName}${notEnglishClause(lang)}; the English wording in tool schemas is format guidance only, including run_code's \`description\` in PTC mode. `
     + 'Keep descriptions short; identifiers, paths, and commands stay in their original script.'
 }
 
@@ -232,7 +243,7 @@ export function buildChannelDirectives(input = {}) {
   let sentence
   if (distinct.length === 1) {
     const all = names.length > 1 ? ' all' : ''
-    sentence = `${joinNames(names)} must${all} be written in ${languageSelfName(langs[0])}, not in English`
+    sentence = `${joinNames(names)} must${all} be written in ${languageSelfName(langs[0])}${notEnglishClause(langs[0])}`
   } else {
     const clauses = []
     if (desc) clauses.push(`tool-call descriptions in ${languageSelfName(desc)}`)

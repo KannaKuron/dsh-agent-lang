@@ -79,11 +79,14 @@ test('buildLanguageDirective: zh mentions the run_code description and the self 
   assert.match(text, /not in English/)
 })
 
-test('buildLanguageDirective: English and absent contribute nothing', () => {
-  assert.equal(buildLanguageDirective('en'), '')
-  assert.equal(buildLanguageDirective('EN'), '')
+test('buildLanguageDirective: absent contributes nothing; English is a REGULAR target (v0.3.0+, anti language-mixing)', () => {
   assert.equal(buildLanguageDirective(undefined), '')
   assert.equal(buildLanguageDirective(''), '')
+  const en = buildLanguageDirective('en')
+  assert.match(en, /must be written in English|Write tool-call descriptions in English/)
+  // the ", not in English" clause is dropped for English itself (would be contradictory)
+  assert.doesNotMatch(en, /not in English/)
+  assert.equal(buildLanguageDirective('EN'), en)
 })
 
 test('buildLanguageDirective: builtin ja/ko use native names; unknown tags fall back to the tag itself', () => {

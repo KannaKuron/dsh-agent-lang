@@ -9,7 +9,7 @@
 ## 环境与工具
 
 - 本机已安装 GitHub CLI(`gh`,已认证 KannaKuron):建仓、推送、release 优先用 gh。
-- 发布双通道家族惯例:`npm test` → `npm version` → `git push --tags` → `gh release create` → Release published 触发 OIDC 自动发 npm(workflow 见 `.github/workflows/npm-publish.yml`)。发布后 `curl -X PUT https://registry.npmmirror.com/dsh-agent-lang/sync` 同步 npmmirror。
+- 发布双通道家族惯例(2026-08-31 起 npm-publish workflow 已删,后续统一重建):`npm test` → `npm version` → `git push --tags` → `gh release create`;正式上 npm 时恢复 OIDC workflow(Release published 触发),发布后 `curl -X PUT https://registry.npmmirror.com/dsh-agent-lang/sync` 同步 npmmirror。
 - 本机 web profile 装本地开发版:`npm pack` 出 tarball → 在 `(dsh home)/profiles/web` 里 `pnpm add <tarball>` → 重启 DSH(`package.json` 的 `dsh.bundle.patch` 声明自动挂载,无需手改 profile patch)。
 
 ## 目录地图
@@ -25,7 +25,7 @@
 ## 核心不变量(改代码前必读)
 
 1. **只注入提示,不改资产**。绝不修改 preset / persona / 工具 schema / 任何 dsh 发行文件:它们是部署资产,升级覆盖 + 影响 request-cache 稳定性设计。唯一通道是运行时注册的提示贡献。
-2. **通道是 `systemPrompt.context()`,不是 `section()`**。理由:与沙箱/审批策略同列(语义契合)、每轮请求刷新(语言切换下一轮生效)、渲染在请求末尾(近因压过工具 schema 的英文指引)。空文本贡献会在渲染时被丢弃——英文/未检测时返回 '' 是**特性**(零提示噪声)。已知例外:`minimal` preset 的 persona `complete: true` 且 `includeRuntimeContext: false`,提示对一切后挂贡献者封闭——接受,文档声明,不要试图穿透(waterfall 也改不动 complete 恢复)。
+2. **通道是 `systemPrompt.context()`,不是 `section()`**。理由:与沙箱/审批策略同列(语义契合)、每轮请求刷新(语言切换下一轮生效)、渲染在请求末尾(近因压过工具 schema 的英文指引)。空文本贡献会在渲染时被丢弃——**完全未检测到语言**时返回 '' 是**特性**(零提示噪声);**英文自 v0.3.0 起是正常目标语言**(部分模型思考/输出会混杂多语言,显式英文指示同样纠正),仅为英文自身省略 ", not in English" 从句。已知例外:`minimal` preset 的 persona `complete: true` 且 `includeRuntimeContext: false`,提示对一切后挂贡献者封闭——接受,文档声明,不要试图穿透(waterfall 也改不动 complete 恢复)。
 3. **语言来源优先级(纯函数 `pickDisplayLanguage`,测试覆盖)**:mode off → 无;force+合法 forceLocale → forceLocale;auto:locale ns 的 `preference` > agent-lang ns 的 `uiLocale`;非法 BCP 47 一律忽略。**绝不写 `locale` 命名空间**(那是用户的显式选择,写它会破坏「absence delegates to browser」语义);client 只写自己 ns 的 `uiLocale` 单字段(settings 写是逐字段深合并,mode/forceLocale 永远幸存)。
 4. **设置命名空间 schema 必须是可调用的 schemastery 对象**(`schema(merged)` 解析值;zod 会抛 `not a function` 且命名空间永不服务 → 卡片永不出现,2026-08 dsh-better-workspace 实测根因)。因此 host 半用**动态** `import('@deepseek-ai/schemastery')`(保持冒烟测试零依赖可 import 本文件),运行时经 profile 共享 fallback 解析(实测可行);`@deepseek-ai/dsh-settings` 的 `settingsNamespace()` 做 era 探测(新 dsh 已移除该 helper,register 直接收字符串;旧 dsh 收 branded 形态,单次调用双兼容)。schemastery 只进 peerDependencies,不进 dependencies。
 5. **无构建**。host 半纯 ESM JS;client 半是**手写 ModuleLoader bundle**(`window.__ModuleLoader__.load({id, factory})`,id=包名):`require` 只允许基线白名单(react、react/jsx-runtime、react-dom、react-dom/client、@deepseek-ai/cordis、@deepseek-ai/dsh-client-store、@deepseek-ai/dsh-client-ui-slots、@deepseek-ai/dsh-client-ui-primitives),冒烟测试强制;无 import/JSX/TS 语法。
@@ -38,7 +38,7 @@
 
 ## 验证清单(改动后)
 
-1. `npm test` 全绿(23 项)。
+1. `npm test` 全绿(28 项)。
 2. 真机(web profile 重启 DSH):
    - 页面加载后 `~/.dsh/settings.yaml` 出现 `agent-lang:` 段(`uiLocale` 为当前界面语言);
    - 任意非 minimal 模式新会话:工具调用卡片描述为界面语言(中文界面→中文描述);
