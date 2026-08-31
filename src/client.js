@@ -15,9 +15,20 @@
  *      the namespace. The card switches mode (auto/force/off) and, for
  *      force mode, the forced language tag.
  *
+ * SLOT REGISTRATION CONTRACT (verified against dsh-better-workspace 0.6.0,
+ * live 2026-08-31): arbitrary objects do NOT reach the component through
+ * top-level registration options — only the protocol fields do (`locale`
+ * binds the `t` seat, `store` binds a store seat, and an `inject` FACTORY's
+ * returned members become props: plain members by their own name, a
+ * `hooks` sub-object's members as useXxx hooks). This bundle passes the
+ * bound settings scopes through an `inject` factory as PLAIN members; the
+ * card reads them via getSnapshot() per render and refreshes with a local
+ * tick after each write (no useSyncExternalStore: a scope passed this way
+ * has no hook adapter, and touching undefined props crashed the first
+ * version's render — the card vanished silently).
+ *
  * Hand-written bundle rules (no build step in this repo):
- *   - ONE window.__ModuleLoader__.load({...}) call, id = package name (the
- *     combo route serves `<id>/client.js`);
+ *   - ONE window.__ModuleLoader__.load({...}) call, id = package name;
  *   - `require` restricted to the client-module BASELINE whitelist:
  *     react and @deepseek-ai/dsh-client-ui-primitives only (smoke-enforced);
  *   - plain React.createElement, no JSX/TS; components defined at module
@@ -37,7 +48,6 @@ window.__ModuleLoader__.load({
 
 		var E = React.createElement;
 		var useState = React.useState;
-		var useSyncExternalStore = React.useSyncExternalStore;
 
 		var TAG = "[dsh-desc-lang]";
 		var NS = "desc-lang";
@@ -116,7 +126,7 @@ window.__ModuleLoader__.load({
 			".dl-segBtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}",
 			".dl-segBtn.dl-segActive{border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-label-primary)}",
 			".dl-force{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--dsw-alias-label-secondary)}",
-			".dl-input{appearance:none;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:inherit;font-size:13px;padding:6px 10px;max-width:220px}",
+			".dl-input{appearance:none;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-2);color:var(--dsh-alias-label-primary,var(--dsw-alias-label-primary));font:inherit;font-size:13px;padding:6px 10px;max-width:220px}",
 			".dl-input:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}",
 			".dl-hint{margin:0;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-tertiary)}",
 			".dl-error{margin:0;font-size:12px;color:var(--dsw-alias-status-danger, #e5484d)}",
@@ -150,17 +160,36 @@ window.__ModuleLoader__.load({
 			}
 		}
 
-		// ── settings card (module-level component; hooks before early returns) ──
+		// ── error boundary (the dsh-better-workspace QuietBoundary pattern) ──────
 
 		/**
-		 * The Settings → Plugins card. Runtime props arrive through the slot
-		 * registration options: `t` (bound dictionary), `scope` (this plugin's
-		 * settings scope), `localeScope` (the built-in locale namespace scope,
-		 * read-only, for showing the explicit choice in the detection chain).
+		 * A render failure degrades THIS card, never the settings page or the
+		 * plugin fiber — the same seat-local containment better-workspace uses.
+		 */
+		function QuietBoundary(props) {}
+		QuietBoundary.prototype = Object.create(React.Component.prototype);
+		QuietBoundary.prototype.constructor = QuietBoundary;
+		QuietBoundary.state = { failed: false };
+		QuietBoundary.getDerivedStateFromError = function () { return { failed: true } };
+		QuietBoundary.prototype.componentDidCatch = function (error) {
+			console.warn(TAG + " settings card render failed:", error && error.message ? error.message : error);
+		};
+		QuietBoundary.prototype.render = function () {
+			if (this.state && this.state.failed) return null;
+			return this.props.children;
+		};
+
+		// ── settings card (module-level component) ───────────────────────────────
+
+		/**
+		 * The Settings → Plugins card. `t` arrives through the registration's
+		 * `locale` field; `scope`/`localeScope` arrive as PLAIN props from the
+		 * `inject` factory (this plugin's own namespace scope, and the built-in
+		 * locale namespace scope read-only for the detection-chain display).
+		 * Snapshots are read per render; each write bumps a local tick so the
+		 * card re-reads without needing an external-store hook adapter.
 		 */
 		function DescLangCard(props) {
-			var scope = props.scope;
-			var localeScope = props.localeScope;
 			var t = typeof props.t === "function" ? props.t : function (key) { return key; };
 
 			var openState = useState(false);
@@ -171,13 +200,27 @@ window.__ModuleLoader__.load({
 			var error = errorState[0];
 			var setError = errorState[1];
 
-			var snap = useSyncExternalStore(scope.subscribe, scope.getSnapshot);
-			var localeSnap = localeScope
-				? useSyncExternalStore(localeScope.subscribe, localeScope.getSnapshot)
-				: { status: "unavailable" };
+			var tickState = useState(0);
+			var tick = tickState[0];
+			var bumpTick = tickState[1];
+			void tick;
 
-			// A card renders nothing while its namespace is unavailable: the
-			// Host plugin is absent or the connection keeps settings local.
+			var scope = props.scope;
+			var localeScope = props.localeScope;
+
+			// Read defensively: a missing scope (service shape drift) degrades to
+			// the unavailable branch instead of crashing the render.
+			var snap = { status: "unavailable" };
+			try {
+				if (scope && typeof scope.getSnapshot === "function") snap = scope.getSnapshot();
+			} catch (error_) { /* keep unavailable */ }
+			var localeSnap = undefined;
+			try {
+				if (localeScope && typeof localeScope.getSnapshot === "function") localeSnap = localeScope.getSnapshot();
+			} catch (error_) { /* ignore */ }
+
+			// A card renders nothing while its namespace is unavailable: the Host
+			// plugin is absent or the connection keeps settings local.
 			if (snap.status !== "ready") return null;
 
 			var value = snap.value || {};
@@ -200,7 +243,9 @@ window.__ModuleLoader__.load({
 								: scope.set("forceLocale", patch.forceLocale);
 						}
 					})
+					.then(function () { bumpTick(function (n) { return n + 1; }); })
 					.catch(function (err) {
+						bumpTick(function (n) { return n + 1; });
 						setError(t("error") + ": " + (err && err.message ? err.message : String(err)));
 					});
 			}
@@ -364,22 +409,39 @@ window.__ModuleLoader__.load({
 				};
 			}, "dsh-desc-lang: styles, dictionary, ui-locale report");
 
-			// The Plugins tab pairs Host-served namespaces with cards registered
-			// under the same key, so this card appears exactly when the Host half
-			// of this plugin is alive.
-			try {
-				ctx.slots.inject("settings.plugin.item", function () {
-					return ctx.slots.register({
-						name: "settings.plugin.item",
-						key: NS,
-						locale: DICT_NS,
-						scope: scope,
-						localeScope: localeScope,
-					}, DescLangCard);
-				});
-			} catch (error) {
-				console.warn(TAG + " settings card registration failed:", error && error.message ? error.message : error);
-			}
+			// Registration helper (the dsh-better-workspace guarded pattern): a
+			// thrown register (semantics drift, vanishing hole declaration
+			// mid-transition) degrades this one seat, never the plugin fiber.
+			var guardedCard = function () {
+				try {
+					var slots = ctx.slots;
+					if (!slots || typeof slots.register !== "function" || typeof slots.inject !== "function") {
+						console.warn(TAG + " slots service unavailable; settings card skipped");
+						return undefined;
+					}
+					return slots.inject("settings.plugin.item", function () {
+						return slots.register({
+							name: "settings.plugin.item",
+							key: NS,
+							locale: DICT_NS,
+							// The inject factory's returned members become the
+							// component's props: the two bound settings scopes ride
+							// here as PLAIN members (top-level options fields do NOT
+							// reach the component — verified against
+							// dsh-better-workspace 0.6.0, 2026-08-31).
+							inject: function () {
+								return { scope: scope, localeScope: localeScope };
+							},
+						}, function CardWithBoundary(props) {
+							return E(QuietBoundary, null, E(DescLangCard, props));
+						});
+					});
+				} catch (error) {
+					console.warn(TAG + " settings card registration failed:", error && error.message ? error.message : error);
+					return undefined;
+				}
+			};
+			guardedCard();
 		};
 
 		return module.exports;

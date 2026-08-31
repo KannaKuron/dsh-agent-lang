@@ -179,13 +179,21 @@ test('client bundle: zh/en dictionary keys stay aligned', () => {
   assert.deepEqual([...zhKeys].sort(), [...enKeys].sort())
 })
 
-test('client bundle: components at module level, hooks before early returns', () => {
+test('client bundle: card receives scopes ONLY through the inject factory', () => {
   assert.match(clientSource, /function DescLangCard\(props\) \{/)
-  // the status early return sits AFTER the useSyncExternalStore calls
-  const cardBody = clientSource.slice(clientSource.indexOf('function DescLangCard'))
-  const firstHook = cardBody.indexOf('useSyncExternalStore(')
-  const earlyReturn = cardBody.indexOf('snap.status !== "ready"')
-  assert.ok(firstHook >= 0 && earlyReturn > firstHook)
+  // verified against dsh-better-workspace 0.6.0: top-level options fields do
+  // NOT reach the component — the scopes must ride the inject factory.
+  assert.match(clientSource, /inject: function \(\) \{\s*\n\s*return \{ scope: scope, localeScope: localeScope \}/)
+  const optionsBlock = clientSource.slice(
+    clientSource.indexOf('key: NS'),
+    clientSource.indexOf('inject: function ()'),
+  )
+  assert.ok(!/(^|\n)\s*(scope|localeScope|store):/.test(optionsBlock), 'scopes leaked into top-level registration options')
+  // no external-store hook adapter CALLS: snapshots are read per render, writes bump a tick
+  // (the word may appear in explanatory comments)
+  assert.doesNotMatch(clientSource, /useSyncExternalStore\s*\(/)
+  // a render failure degrades this card only (QuietBoundary pattern)
+  assert.match(clientSource, /QuietBoundary/)
 })
 
 // ── manifest consistency ─────────────────────────────────────────────────────
