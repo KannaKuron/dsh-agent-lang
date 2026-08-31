@@ -48,6 +48,44 @@ window.__ModuleLoader__.load({
 		var E = React.createElement;
 		var useState = React.useState;
 
+		// Common BCP 47 candidates for the force-language combo (datalist).
+		// The datalist is a HINT, not a constraint: users may still type any
+		// BCP 47 tag. Option labels only render on browsers that support
+		// them; the value is what gets written.
+		var LANG_OPTIONS = [
+			{ value: "zh", label: "简体中文 (zh)" },
+			{ value: "zh-Hans", label: "简体中文 (zh-Hans)" },
+			{ value: "zh-TW", label: "繁體中文 (zh-TW)" },
+			{ value: "en", label: "English (en)" },
+			{ value: "ja", label: "日本語 (ja)" },
+			{ value: "ko", label: "한국어 (ko)" },
+			{ value: "fr", label: "Français (fr)" },
+			{ value: "de", label: "Deutsch (de)" },
+			{ value: "es", label: "Español (es)" },
+			{ value: "ru", label: "Русский (ru)" },
+			{ value: "pt", label: "Português (pt)" },
+			{ value: "it", label: "Italiano (it)" },
+			{ value: "ar", label: "العربية (ar)" },
+			{ value: "hi", label: "हिन्दी (hi)" },
+			{ value: "vi", label: "Tiếng Việt (vi)" },
+			{ value: "th", label: "ไทย (th)" },
+		];
+
+		/** One channel's force-language options: a stored custom tag first
+		 *  (so a saved value is always visible), then the common list. */
+		function langOptions(current) {
+			var opts = [];
+			if (typeof current === "string" && current !== "") {
+				opts.push({ value: current, label: current + " (current)" });
+			}
+			for (var i = 0; i < LANG_OPTIONS.length; i++) {
+				var o = LANG_OPTIONS[i];
+				if (o.value === current) continue;
+				opts.push(o);
+			}
+			return opts;
+		}
+
 		var TAG = "[dsh-agent-lang]";
 		var NS = "agent-lang";
 		var LOCALE_NS = "locale";
@@ -335,27 +373,35 @@ window.__ModuleLoader__.load({
 						}),
 					),
 					ch.m === "force"
-						? E("input", {
-							className: "dl-input",
-							type: "text",
-							defaultValue: typeof ch.loc === "string" ? ch.loc : "",
-							placeholder: "zh",
-							spellCheck: false,
-							"aria-label": t("mode.force"),
-							onBlur: function (event) {
-								var patch = {};
-								patch[ch.localeKey] = (event.target.value || "").trim();
-								write(patch);
-							},
-							onKeyDown: function (event) {
-								if (event.key === "Enter") {
-									event.preventDefault();
+						? E(React.Fragment, null,
+							E("input", {
+								className: "dl-input",
+								type: "text",
+								list: "dl-lang-" + ch.key,
+								defaultValue: typeof ch.loc === "string" ? ch.loc : "",
+								placeholder: "zh",
+								spellCheck: false,
+								"aria-label": t("mode.force"),
+								onBlur: function (event) {
 									var patch = {};
 									patch[ch.localeKey] = (event.target.value || "").trim();
 									write(patch);
-								}
-							},
-						})
+								},
+								onKeyDown: function (event) {
+									if (event.key === "Enter") {
+										event.preventDefault();
+										var patch = {};
+										patch[ch.localeKey] = (event.target.value || "").trim();
+										write(patch);
+									}
+								},
+							}),
+							E("datalist", { id: "dl-lang-" + ch.key },
+								langOptions(ch.loc).map(function (opt) {
+									return E("option", { key: opt.value, value: opt.value, label: opt.label }, null);
+								})
+							),
+						)
 						: null,
 				);
 			}

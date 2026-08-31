@@ -24,7 +24,7 @@ This plugin changes only the PROMPT side: one global dynamic runtime-context dir
 
 - **Detection order** (auto mode): the explicit Settings → General → Language choice > the browser-reported active locale. **English is a regular target too** (v0.3.0+): some models mix languages inside thinking/replies, and an explicit English directive pins them; only a fully undetected language injects nothing.
 - **Channel**: `systemPrompt.context()` — the same per-request runtime-context snapshot as the sandbox/approval policies, rendered near the end of each request so recency beats the English tool-schema guidance. A GUI language switch takes effect on the very next request.
-- **Settings card**: Settings → Plugins pairs Host-served namespaces with registered cards automatically; switch behavior (follow GUI language / force a BCP 47 tag like `zh`, `ja` / off) and inspect the detection chain.
+- **Settings card**: Settings → Plugins pairs Host-served namespaces with registered cards automatically; switch behavior (follow GUI language / force a BCP 47 tag — pick from the dropdown or type one, e.g. `zh`, `ja` / off) and inspect the detection chain.
 
 ## Install
 
@@ -40,7 +40,7 @@ Plain JS, no build step, no installed dependencies (schemastery is a peer resolv
 2. `~/.dsh/settings.yaml` gains a `agent-lang:` section (`uiLocale: zh`) once a page loaded;
 3. Any new session: tool-call descriptions come out in Chinese;
 4. Switch the GUI language in Settings → General — descriptions switch on the next request;
-5. Settings → Plugins → Tool Description Language: force `ja`, switch off, etc.
+5. Settings → Plugins → Tool Description Language: pick `ja` from the force-language dropdown (or type any tag), switch off, etc.
 
 ## Known limits
 
