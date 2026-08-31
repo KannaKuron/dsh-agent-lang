@@ -1,4 +1,4 @@
-// Smoke tests for dsh-desc-lang — pure file/helper level, no Cordis runtime
+// Smoke tests for dsh-agent-lang — pure file/helper level, no Cordis runtime
 // and zero dependencies needed. Run: npm test (node --test tests/smoke.mjs)
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -16,8 +16,10 @@ const {
   CONTEXT_ORDER,
   BCP47,
   pickDisplayLanguage,
+  resolveChannelLanguage,
   languageSelfName,
   buildLanguageDirective,
+  buildChannelDirectives,
 } = _internal
 
 const hostSource = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8')
@@ -26,14 +28,14 @@ const clientSource = readFileSync(new URL('../src/client.js', import.meta.url), 
 // ── plugin shape ─────────────────────────────────────────────────────────────
 
 test('plugin shape: name, no hard injects, namespace constants', () => {
-  assert.equal(pluginName, 'dsh-desc-lang')
+  assert.equal(pluginName, 'dsh-agent-lang')
   assert.deepEqual(pluginInject, [])
-  assert.equal(SETTINGS_NAMESPACE, 'desc-lang')
+  assert.equal(SETTINGS_NAMESPACE, 'agent-lang')
   assert.equal(LOCALE_NAMESPACE, 'locale')
 })
 
 test('context placement: free slot after the centrally allocated orders', () => {
-  assert.equal(CONTEXT_NAME, 'desc-lang:ui-language')
+  assert.equal(CONTEXT_NAME, 'agent-lang:ui-language')
   // After SANDBOX_POLICY(110)/APPROVAL_POLICY(115)/SUBAGENT_DELEGATION(120).
   assert.equal(CONTEXT_ORDER, 125)
 })
@@ -88,6 +90,37 @@ test('buildLanguageDirective: unknown tags still produce a directive', () => {
   assert.ok(text.length > 0)
 })
 
+// ── three-channel resolution ─────────────────────────────────────────────────
+
+test('resolveChannelLanguage: per-channel modes resolve independently', () => {
+  const chain = { preference: 'zh', reported: 'zh' }
+  assert.equal(resolveChannelLanguage({ mode: 'off', ...chain }), undefined)
+  assert.equal(resolveChannelLanguage({ mode: 'force', locale: 'ja', ...chain }), 'ja')
+  assert.equal(resolveChannelLanguage({ mode: 'auto', ...chain }), 'zh')
+  assert.equal(resolveChannelLanguage({ mode: 'force', locale: 'not a tag!', ...chain }), 'zh')
+})
+
+test('buildChannelDirectives: defaults (think/out off) equal the desc-only text', () => {
+  const chain = { preference: 'zh', reported: 'zh' }
+  const only = buildChannelDirectives({ descMode: 'auto', ...chain })
+  assert.equal(only, buildLanguageDirective('zh'))
+  // everything off → nothing
+  assert.equal(buildChannelDirectives({ descMode: 'off', thinkMode: 'off', outMode: 'off', ...chain }), '')
+})
+
+test('buildChannelDirectives: enabled think/out contribute their sentences', () => {
+  const text = buildChannelDirectives({
+    preference: 'zh',
+    descMode: 'auto',
+    thinkMode: 'auto',
+    outMode: 'force',
+    outLocale: 'ja',
+  })
+  assert.match(text, /Tool-call descriptions must be written in 简体中文/)
+  assert.match(text, /internal reasoning .* in 简体中文 \(zh\) as well/)
+  assert.match(text, /final user-facing replies in the language with BCP-47 tag "ja" \(ja\)/)
+})
+
 // ── host half source discipline ──────────────────────────────────────────────
 
 test('host half: registers a runtime CONTEXT, never a prompt section', () => {
@@ -128,7 +161,7 @@ test('host half: directive text provider is a function re-evaluated per assembly
 
 test('client bundle: ModuleLoader wrapper with the package id', () => {
   assert.match(clientSource, /window\.__ModuleLoader__\.load\(\{/)
-  assert.match(clientSource, /id: "dsh-desc-lang"/)
+  assert.match(clientSource, /id: "dsh-agent-lang"/)
 })
 
 test('client bundle: require whitelist is the client-module baseline', () => {
@@ -149,7 +182,7 @@ test('client bundle: no import/JSX/TypeScript syntax', () => {
   assert.doesNotMatch(clientSource, /:\s*(string|boolean|number|void)\b/)
 })
 
-test('client bundle: reports ONLY uiLocale into the desc-lang namespace', () => {
+test('client bundle: reports ONLY uiLocale into the agent-lang namespace', () => {
   assert.match(clientSource, /settingsScope\.bind\(\{ namespace: NS \}\)/)
   assert.match(clientSource, /scope\.set\("uiLocale", active\)/)
   // never touches the built-in locale namespace with a write
@@ -164,6 +197,19 @@ test('client bundle: settings card keyed by the namespace with zh/en dictionarie
   assert.match(clientSource, /ctx\.locale\.register\(DICT_NS, \{ zh: zh, en: en \}\)/)
   assert.match(clientSource, /ctx\.locale\.register\(DICT_NS, "ja", ja\)/)
   assert.match(clientSource, /ctx\.locale\.register\(DICT_NS, "ko", ko\)/)
+})
+
+test('client bundle: three channels with one-click sync/off shortcuts', () => {
+  // the three channel blocks with their settings keys
+  for (const pair of ['modeKey: "mode"', 'modeKey: "thinkMode"', 'modeKey: "outMode"']) {
+    assert.ok(clientSource.includes(pair), 'missing channel config ' + pair)
+  }
+  for (const pair of ['localeKey: "forceLocale"', 'localeKey: "thinkLocale"', 'localeKey: "outLocale"']) {
+    assert.ok(clientSource.includes(pair), 'missing channel locale ' + pair)
+  }
+  // quick actions write all three modes at once
+  assert.match(clientSource, /write\(\{ mode: "auto", thinkMode: "auto", outMode: "auto" \}\)/)
+  assert.match(clientSource, /write\(\{ mode: "off", thinkMode: "off", outMode: "off" \}\)/)
 })
 
 test('client bundle: zh/en/ja/ko dictionary keys stay aligned', () => {
@@ -212,7 +258,7 @@ test('client bundle: card receives scopes ONLY through the inject factory', () =
 
 test('package manifest: client entry + dsh.client declaration', () => {
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
-  assert.equal(pkg.name, 'dsh-desc-lang')
+  assert.equal(pkg.name, 'dsh-agent-lang')
   assert.equal(pkg.exports['./client'], './src/client.js')
   assert.equal(pkg.dsh.client.platform, 'web')
   for (const dep of pkg.dsh.client.inject) assert.match(dep, /^@deepseek-ai\//)
@@ -221,10 +267,10 @@ test('package manifest: client entry + dsh.client declaration', () => {
 
 test('plugin manifest and bundle patch reference the plugin row', () => {
   const manifest = JSON.parse(readFileSync(new URL('../dsh.plugin.json', import.meta.url), 'utf8'))
-  assert.equal(manifest.id, 'dsh-external/dsh-desc-lang')
+  assert.equal(manifest.id, 'dsh-external/dsh-agent-lang')
   assert.equal(manifest.main, './src/index.js')
   const patch = readFileSync(new URL('../cordis.patch.yml', import.meta.url), 'utf8')
   assert.match(patch, /- insert:/)
-  assert.match(patch, /id: desc-lang/)
-  assert.match(patch, /name: 'dsh-desc-lang'/)
+  assert.match(patch, /id: agent-lang/)
+  assert.match(patch, /name: 'dsh-agent-lang'/)
 })

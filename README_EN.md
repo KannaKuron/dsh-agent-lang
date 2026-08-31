@@ -1,10 +1,10 @@
-# dsh-desc-lang
+# dsh-agent-lang
 
 [简体中文](README.md) | English | [日本語](README_JA.md) | [한국어](README_KO.md)
 
 [![Awesome DSH Plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
 
-> Tool-call descriptions in your GUI language — every tool-call `description` in [DeepSeek Harness (DSH)](https://www.npmjs.com/package/@deepseek-ai/dsh), including PTC mode's `run_code` `description` (the call card's title), gets written in the language your web GUI is actually showing, instead of always English.
+> Agent language control — three independently configured channels for [DeepSeek Harness (DSH)](https://www.npmjs.com/package/@deepseek-ai/dsh) model output: **tool-call descriptions** (including PTC mode's `run_code` `description`, the call card title), **model thinking**, and **replies** — each follows the GUI language, forces a fixed language, or turns off, with one-click sync-all / off-all shortcuts. By default only the descriptions channel is on.
 
 ## Why
 
@@ -31,7 +31,7 @@ This plugin changes only the PROMPT side: one global dynamic runtime-context dir
 ## Install
 
 ```bash
-dsh plugin --profile web add dsh-desc-lang
+dsh plugin --profile web add dsh-agent-lang
 ```
 
 Plain JS, no build step, no installed dependencies (schemastery is a peer resolved through the profile). Restart DSH after installing.
@@ -39,7 +39,7 @@ Plain JS, no build step, no installed dependencies (schemastery is a peer resolv
 ## Verify
 
 1. Install, restart DSH, open the Web GUI (browser language or setting on Chinese);
-2. `~/.dsh/settings.yaml` gains a `desc-lang:` section (`uiLocale: zh`) once a page loaded;
+2. `~/.dsh/settings.yaml` gains a `agent-lang:` section (`uiLocale: zh`) once a page loaded;
 3. Any new session: tool-call descriptions come out in Chinese;
 4. Switch the GUI language in Settings → General — descriptions switch on the next request;
 5. Settings → Plugins → Tool Description Language: force `ja`, switch off, etc.

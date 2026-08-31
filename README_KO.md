@@ -1,10 +1,10 @@
-# dsh-desc-lang
+# dsh-agent-lang
 
 [简体中文](README.md) | [English](README_EN.md) | [日本語](README_JA.md) | 한국어
 
 [![Awesome DSH Plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
 
-> 도구 호출 description을 GUI 언어로 —— [DeepSeek Harness (DSH)](https://www.npmjs.com/package/@deepseek-ai/dsh)의 모든 도구 호출 `description`(PTC 모드의 `run_code` `description`, 즉 호출 카드 제목 포함)이 **웹 GUI가 실제 표시하는 언어**로 작성되게 합니다. 항상 영어가 아니라.
+> 에이전트 언어 제어 —— [DeepSeek Harness (DSH)](https://www.npmjs.com/package/@deepseek-ai/dsh) 모델 출력의 **도구 설명·모델 사고·응답** 세 채널을 각각 설정:GUI 언어 따르기 / 지정 언어 강제 / 끄기,원클릭 전체 동기화·전체 끄기 지원. 기본은 도구 설명 채널만 켜져 있습니다.
 
 ## 왜 필요한가
 
@@ -31,7 +31,7 @@ DSH의 도구 호출에는 필수 `description` 인자가 있으며, 그대로 U
 ## 설치
 
 ```bash
-dsh plugin --profile web add dsh-desc-lang
+dsh plugin --profile web add dsh-agent-lang
 ```
 
 순수 JS, 빌드 없음, 설치 의존성 없음(schemastery는 peer로 profile 공유 해석). 설치 후 DSH를 재시작하세요.
@@ -39,7 +39,7 @@ dsh plugin --profile web add dsh-desc-lang
 ## 검증
 
 1. 설치 후 DSH 재시작 and **한 번 하드 새로고침**(⌘/Ctrl+Shift+R, 아래 알려진 경계 #1 참조);
-2. `~/.dsh/settings.yaml`에 `desc-lang:` 섹션(`uiLocale`)이 나타남;
+2. `~/.dsh/settings.yaml`에 `agent-lang:` 섹션(`uiLocale`)이 나타남;
 3. minimal 이외 임의 모드에서 새 세션 실행 → 도구 호출 카드의 description이 GUI 언어로 표시됨;
 4. 설정 → 일반 → 언어 전환 → 다음 요청부터 description이 따라감;
 5. 설정 → 플러그인 → 도구 설명 언어 카드에서 동작 전환 테스트.

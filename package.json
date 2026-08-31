@@ -1,11 +1,11 @@
 {
-  "name": "dsh-desc-lang",
+  "name": "dsh-agent-lang",
   "version": "0.1.0",
   "description": "DSH plugin: make every tool-call `description` (including run_code's, in any preset — standard, PTC, cordis, user presets, ptc-cordis, gitbash variants) follow the web GUI's display language instead of defaulting to English. Auto-detects the GUI language (explicit Settings→General choice first, browser-reported active locale second) and injects one global dynamic runtime-context directive; no preset or tool schema is modified. Ships a Settings → Plugins card for mode/language control.",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/KannaKuron/dsh-desc-lang.git"
+    "url": "git+https://github.com/KannaKuron/dsh-agent-lang.git"
   },
   "main": "src/index.js",
   "exports": {
@@ -61,8 +61,8 @@
   "publishConfig": {
     "access": "public"
   },
-  "homepage": "https://github.com/KannaKuron/dsh-desc-lang",
+  "homepage": "https://github.com/KannaKuron/dsh-agent-lang",
   "bugs": {
-    "url": "https://github.com/KannaKuron/dsh-desc-lang/issues"
+    "url": "https://github.com/KannaKuron/dsh-agent-lang/issues"
   }
 }

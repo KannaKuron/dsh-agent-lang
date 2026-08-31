@@ -1,31 +1,30 @@
 /**
- * dsh-desc-lang — browser half (hand-written ModuleLoader bundle).
+ * dsh-agent-lang — browser half (hand-written ModuleLoader bundle).
  *
  * Two jobs:
  *   1. REPORTER — pushes the locale runtime's ACTIVE locale (the explicit
  *      Settings→General choice OR the browser navigator match, whatever the
- *      GUI is actually showing) into the Host's `desc-lang` settings
+ *      GUI is actually showing) into the Host's `agent-lang` settings
  *      namespace via a bound `settingsScope`, so the Host-side prompt
- *      directive can localize tool-call descriptions even before the user
- *      ever picks a language.
+ *      directives can localize even before the user ever picks a language.
  *   2. SETTINGS CARD — registers a `settings.plugin.item` card keyed by the
  *      SAME namespace. The Plugins tab dispatches the intersection of
- *      Host-served namespaces and registered cards, so the card appears in
- *      Settings → Plugins automatically once the Host half has registered
- *      the namespace. The card switches mode (auto/force/off) and, for
- *      force mode, the forced language tag.
+ *      Host-served namespaces and registered cards. The card exposes three
+ *      independently configured channels — tool-call descriptions, model
+ *      thinking, user-facing replies — each auto (follow the GUI language) /
+ *      force (a fixed BCP 47 tag) / off, plus one-click "sync all to GUI"
+ *      and "turn all off" shortcuts.
  *
  * SLOT REGISTRATION CONTRACT (verified against dsh-better-workspace 0.6.0,
  * live 2026-08-31): arbitrary objects do NOT reach the component through
  * top-level registration options — only the protocol fields do (`locale`
  * binds the `t` seat, `store` binds a store seat, and an `inject` FACTORY's
- * returned members become props: plain members by their own name, a
- * `hooks` sub-object's members as useXxx hooks). This bundle passes the
- * bound settings scopes through an `inject` factory as PLAIN members; the
- * card reads them via getSnapshot() per render and refreshes with a local
- * tick after each write (no useSyncExternalStore: a scope passed this way
- * has no hook adapter, and touching undefined props crashed the first
- * version's render — the card vanished silently).
+ * returned members become props: plain members by their own name, a `hooks`
+ * sub-object's members as useXxx hooks). This bundle passes the bound
+ * settings scopes through an `inject` factory as PLAIN members; the card
+ * reads them via getSnapshot() per render and refreshes with a local tick
+ * after each write (no useSyncExternalStore: a scope passed this way has no
+ * hook adapter).
  *
  * Hand-written bundle rules (no build step in this repo):
  *   - ONE window.__ModuleLoader__.load({...}) call, id = package name;
@@ -37,7 +36,7 @@
  *     first so `locale` / `settingsScope` / `slots` exist when this applies.
  */
 window.__ModuleLoader__.load({
-	id: "dsh-desc-lang",
+	id: "dsh-agent-lang",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;
@@ -49,86 +48,85 @@ window.__ModuleLoader__.load({
 		var E = React.createElement;
 		var useState = React.useState;
 
-		var TAG = "[dsh-desc-lang]";
-		var NS = "desc-lang";
+		var TAG = "[dsh-agent-lang]";
+		var NS = "agent-lang";
 		var LOCALE_NS = "locale";
-		var DICT_NS = "descLang";
+		var DICT_NS = "agentLang";
 
-		// ── locale dictionaries (zh/en keys MUST stay aligned; smoke-enforced) ──
+		// ── locale dictionaries (all four MUST stay key-aligned; smoke-enforced) ──
 
 		var zh = {
-			"title": "工具描述语言",
-			"cardDesc": "让每个工具调用的 description 跟随界面语言书写(含 PTC 模式 run_code)",
-			"mode": "行为",
+			"title": "语言控制",
+			"cardDesc": "工具描述、模型思考、回复输出——三个通道各自跟随界面语言或固定指定语言",
 			"mode.auto": "跟随界面语言",
 			"mode.force": "强制指定语言",
 			"mode.off": "关闭",
-			"forceLocale": "语言标签",
-			"forceLocale.hint": "BCP 47 标签,如 zh、ja、zh-Hant;留空则回到跟随界面语言",
-			"current": "当前生效",
-			"default": "英文(默认行为,不注入提示词)",
+			"quick.syncAll": "全部跟随界面",
+			"quick.offAll": "全部关闭",
+			"chan.desc": "工具描述",
+			"chan.think": "模型思考",
+			"chan.output": "回复输出",
 			"chosen": "设置中的显式选择",
 			"reported": "浏览器上报",
 			"none": "—",
 			"error": "写入失败",
-			"hint": "自动检测顺序:设置 → 通用 → 语言里的显式选择优先;从未选择过时跟随浏览器语言(由本页上报)。切换界面语言后,下一轮请求即生效。极简模式(minimal)的提示词由其自身封闭,不在覆盖范围内。",
+			"hint": "三个通道独立配置:跟随界面 / 强制指定 / 关闭(思考与回复默认关闭以保持现状)。检测优先级:设置 → 通用 → 语言的显式选择 > 浏览器上报。切换后下一轮请求即生效;minimal 模式提示词封闭,不在范围内。",
 		};
 
 		var en = {
-			"title": "Tool Description Language",
-			"cardDesc": "Tool-call descriptions (including PTC run_code's) follow the GUI language",
-			"mode": "Behavior",
+			"title": "Language Control",
+			"cardDesc": "Tool descriptions, model thinking, and replies — each follows the GUI language or a fixed one",
 			"mode.auto": "Follow GUI language",
 			"mode.force": "Force a language",
 			"mode.off": "Off",
-			"forceLocale": "Language tag",
-			"forceLocale.hint": "BCP 47 tag, e.g. zh, ja, zh-Hant; empty falls back to following the GUI language",
-			"current": "Currently active",
-			"default": "English (default behavior, nothing injected)",
+			"quick.syncAll": "Sync all to GUI",
+			"quick.offAll": "Turn all off",
+			"chan.desc": "Tool descriptions",
+			"chan.think": "Model thinking",
+			"chan.output": "Replies",
 			"chosen": "Explicit choice (Settings → General)",
 			"reported": "Browser report",
 			"none": "—",
 			"error": "Write failed",
-			"hint": "Auto-detection order: the explicit Settings → General → Language choice wins; with no choice ever made, the browser language is followed (reported by this page). A GUI language switch takes effect on the next request. The minimal preset seals its own prompt and is out of scope by design.",
+			"hint": "Three independent channels: follow GUI / force a tag / off (thinking and replies default to off, preserving current behavior). Detection order: the explicit Settings → General → Language choice over the browser report. Changes apply on the next request; the minimal preset seals its prompt and is out of scope.",
 		};
 
 		// Optional language packs: registered per-locale, inert until a matching
-		// external language definition (ja/ko) is active in the GUI. Keys MUST
-		// stay aligned with zh/en (smoke-enforced across all four).
+		// external language definition (ja/ko) is active in the GUI.
 		var ja = {
-			"title": "ツール説明言語",
-			"cardDesc": "各ツール呼び出しの description(PTC モードの run_code を含む)をGUIの表示言語で書かせる",
-			"mode": "動作",
+			"title": "言語制御",
+			"cardDesc": "ツール説明・モデルの思考・回答をそれぞれGUI言語または指定言語で",
 			"mode.auto": "GUI言語に従う",
 			"mode.force": "言語を指定",
 			"mode.off": "オフ",
-			"forceLocale": "言語タグ",
-			"forceLocale.hint": "BCP 47 タグ(zh、ja、zh-Hant など)。空欄の場合はGUI言語に従う",
-			"current": "現在有効",
-			"default": "英語(デフォルト動作。何も注入しません)",
+			"quick.syncAll": "すべてGUI言語に",
+			"quick.offAll": "すべてオフ",
+			"chan.desc": "ツール説明",
+			"chan.think": "モデルの思考",
+			"chan.output": "回答出力",
 			"chosen": "設定での明示的な選択",
 			"reported": "ブラウザー報告",
 			"none": "—",
 			"error": "書き込み失敗",
-			"hint": "自動検出の順序:設定 → 全般 → 言語での明示的な選択が優先されます。選択したことがない場合はブラウザー言語に従います(このページが報告)。GUI言語を切り替えると、次のリクエストから反映されます。minimal プリセットはプロンプトが封鎖されているため対象外です。",
+			"hint": "3つのチャネルを独立に設定:GUI言語に従う / 指定 / オフ(思考と回答は現状維持のためデフォルトはオフ)。検出順序:設定 → 全般 → 言語の明示的な選択がブラウザー報告に優先。切り替えは次のリクエストから反映;minimal プリセットはプロンプトが封鎖されているため対象外です。",
 		};
 
 		var ko = {
-			"title": "도구 설명 언어",
-			"cardDesc": "모든 도구 호출의 description(PTC 모드 run_code 포함)를 GUI 표시 언어로 작성",
-			"mode": "동작",
+			"title": "언어 제어",
+			"cardDesc": "도구 설명·모델 사고·응답을 각각 GUI 언어 또는 지정 언어로",
 			"mode.auto": "GUI 언어 따르기",
 			"mode.force": "언어 지정",
 			"mode.off": "끄기",
-			"forceLocale": "언어 태그",
-			"forceLocale.hint": "BCP 47 태그(예: zh, ja, zh-Hant). 비워 두면 GUI 언어를 따름",
-			"current": "현재 적용됨",
-			"default": "영어(기본 동작, 아무것도 주입하지 않음)",
+			"quick.syncAll": "전체 GUI 언어로",
+			"quick.offAll": "전체 끄기",
+			"chan.desc": "도구 설명",
+			"chan.think": "모델 사고",
+			"chan.output": "응답 출력",
 			"chosen": "설정에서 명시적 선택",
 			"reported": "브라우저 보고",
 			"none": "—",
 			"error": "쓰기 실패",
-			"hint": "자동 감지 순서: 설정 → 일반 → 언어에서 명시적으로 선택한 값이 우선합니다. 선택한 적이 없으면 브라우저 언어를 따릅니다(이 페이지가 보고). GUI 언어를 전환하면 다음 요청부터 적용됩니다. minimal 프리셋은 프롬프트가 폐쇄되어 있어 대상에서 제외됩니다.",
+			"hint": "세 채널을 독립 설정:GUI 언어 따르기 / 지정 / 끄기(사고와 응답은 현상 유지를 위해 기본 꺼짐). 감지 순서: 설정 → 일반 → 언어의 명시적 선택이 브라우저 보고에 우선. 전환은 다음 요청부터 적용;minimal 프리셋은 프롬프트가 폐쇄되어 있어 대상에서 제외됩니다.",
 		};
 
 		/** Language id → self name, mirroring the host half's table. */
@@ -142,7 +140,7 @@ window.__ModuleLoader__.load({
 
 		// ── styles (dl- prefixed; tokens mirror PluginCard.module.css) ──────────
 
-		var STYLE_ID = "dsh-desc-lang-style";
+		var STYLE_ID = "dsh-agent-lang-style";
 
 		var CSS = [
 			".dl-card{list-style:none;border:1px solid var(--dsw-alias-border-l2);border-radius:12px;background:var(--dsw-alias-bg-layer-3);transition:border-color .16s,background .16s}",
@@ -164,8 +162,9 @@ window.__ModuleLoader__.load({
 			".dl-segBtn:hover{border-color:var(--dsw-alias-label-dimmed)}",
 			".dl-segBtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}",
 			".dl-segBtn.dl-segActive{border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-label-primary)}",
-			".dl-force{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--dsw-alias-label-secondary)}",
-			".dl-input{appearance:none;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-2);color:var(--dsh-alias-label-primary,var(--dsw-alias-label-primary));font:inherit;font-size:13px;padding:6px 10px;max-width:220px}",
+			".dl-force{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--dsw-alias-label-secondary)}",
+			".dl-chanLabel{font-weight:500;color:var(--dsw-alias-label-primary)}",
+			".dl-input{appearance:none;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:inherit;font-size:13px;padding:6px 10px;max-width:220px}",
 			".dl-input:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}",
 			".dl-hint{margin:0;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-tertiary)}",
 			".dl-error{margin:0;font-size:12px;color:var(--dsw-alias-status-danger, #e5484d)}",
@@ -201,10 +200,7 @@ window.__ModuleLoader__.load({
 
 		// ── error boundary (the dsh-better-workspace QuietBoundary pattern) ──────
 
-		/**
-		 * A render failure degrades THIS card, never the settings page or the
-		 * plugin fiber — the same seat-local containment better-workspace uses.
-		 */
+		/** A render failure degrades THIS card, never the settings page. */
 		function QuietBoundary(props) {}
 		QuietBoundary.prototype = Object.create(React.Component.prototype);
 		QuietBoundary.prototype.constructor = QuietBoundary;
@@ -223,10 +219,8 @@ window.__ModuleLoader__.load({
 		/**
 		 * The Settings → Plugins card. `t` arrives through the registration's
 		 * `locale` field; `scope`/`localeScope` arrive as PLAIN props from the
-		 * `inject` factory (this plugin's own namespace scope, and the built-in
-		 * locale namespace scope read-only for the detection-chain display).
-		 * Snapshots are read per render; each write bumps a local tick so the
-		 * card re-reads without needing an external-store hook adapter.
+		 * `inject` factory. Snapshots are read per render; each write bumps a
+		 * local tick so the card re-reads without an external-store hook adapter.
 		 */
 		function DescLangCard(props) {
 			var t = typeof props.t === "function" ? props.t : function (key) { return key; };
@@ -247,8 +241,6 @@ window.__ModuleLoader__.load({
 			var scope = props.scope;
 			var localeScope = props.localeScope;
 
-			// Read defensively: a missing scope (service shape drift) degrades to
-			// the unavailable branch instead of crashing the render.
 			var snap = { status: "unavailable" };
 			try {
 				if (scope && typeof scope.getSnapshot === "function") snap = scope.getSnapshot();
@@ -258,8 +250,6 @@ window.__ModuleLoader__.load({
 				if (localeScope && typeof localeScope.getSnapshot === "function") localeSnap = localeScope.getSnapshot();
 			} catch (error_) { /* ignore */ }
 
-			// A card renders nothing while its namespace is unavailable: the Host
-			// plugin is absent or the connection keeps settings local.
 			if (snap.status !== "ready") return null;
 
 			var value = snap.value || {};
@@ -269,19 +259,22 @@ window.__ModuleLoader__.load({
 				? (typeof localeSnap.value.preference === "string" ? localeSnap.value.preference : "")
 				: "";
 
+			// Generic multi-field write: each patch key is set in order; an
+			// empty-string value clears the stored field (re-inherits defaults).
 			function write(patch) {
 				setError("");
-				Promise.resolve()
-					.then(function () {
-						if (patch.mode !== undefined) return scope.set("mode", patch.mode);
-					})
-					.then(function () {
-						if (patch.forceLocale !== undefined) {
-							return patch.forceLocale === ""
-								? scope.unset("forceLocale")
-								: scope.set("forceLocale", patch.forceLocale);
-						}
-					})
+				var keys = Object.keys(patch);
+				var chain = Promise.resolve();
+				for (var ki = 0; ki < keys.length; ki++) {
+					(function (key) {
+						chain = chain.then(function () {
+							var v = patch[key];
+							if (v === "") return scope.unset(key);
+							return scope.set(key, v);
+						});
+					})(keys[ki]);
+				}
+				chain
 					.then(function () { bumpTick(function (n) { return n + 1; }); })
 					.catch(function (err) {
 						bumpTick(function (n) { return n + 1; });
@@ -289,18 +282,26 @@ window.__ModuleLoader__.load({
 					});
 			}
 
-			var resolvedLabel = t("default");
-			if (mode === "force" && typeof value.forceLocale === "string" && value.forceLocale) {
-				resolvedLabel = selfName(value.forceLocale) || value.forceLocale;
-			} else if (mode === "auto") {
-				var effective = chosen || reported;
-				var self = selfName(effective);
-				if (effective && effective.toLowerCase() !== "en") {
-					resolvedLabel = (self || '"' + effective + '"') + " (" + effective + ")";
-				} else if (effective && effective.toLowerCase() === "en") {
-					resolvedLabel = "English";
+			// One label resolver shared by the three channels: what the channel
+			// currently resolves to, shown beside its name.
+			function channelLabel(m, locale) {
+				if (m === "off") return t("mode.off");
+				if (m === "force") {
+					if (typeof locale === "string" && locale) return selfName(locale) || locale;
+					return t("mode.force");
 				}
+				var effective = chosen || reported;
+				if (!effective) return t("mode.off");
+				if (effective.toLowerCase() === "en") return "English";
+				var self = selfName(effective);
+				return (self || '"' + effective + '"') + " (" + effective + ")";
 			}
+
+			var channels = [
+				{ key: "desc", label: t("chan.desc"), modeKey: "mode", localeKey: "forceLocale", m: mode, loc: value.forceLocale },
+				{ key: "think", label: t("chan.think"), modeKey: "thinkMode", localeKey: "thinkLocale", m: value.thinkMode || "off", loc: value.thinkLocale },
+				{ key: "out", label: t("chan.output"), modeKey: "outMode", localeKey: "outLocale", m: value.outMode || "off", loc: value.outLocale },
+			];
 
 			var Chevron = icon("IconChevronDownOutline14");
 
@@ -309,6 +310,49 @@ window.__ModuleLoader__.load({
 				{ id: "force", label: t("mode.force") },
 				{ id: "off", label: t("mode.off") },
 			];
+
+			function channelBlock(ch) {
+				return E("div", { key: ch.key, className: "dl-force" },
+					E("span", { className: "dl-chanLabel" }, ch.label + ": " + channelLabel(ch.m, ch.loc)),
+					E("div", { className: "dl-seg" },
+						modes.map(function (m) {
+							return E("button", {
+								key: m.id,
+								type: "button",
+								className: "dl-segBtn" + (ch.m === m.id ? " dl-segActive" : ""),
+								onClick: function () {
+									var patch = {};
+									patch[ch.modeKey] = m.id;
+									write(patch);
+								},
+							}, m.label);
+						}),
+					),
+					ch.m === "force"
+						? E("input", {
+							className: "dl-input",
+							type: "text",
+							defaultValue: typeof ch.loc === "string" ? ch.loc : "",
+							placeholder: "zh",
+							spellCheck: false,
+							"aria-label": t("mode.force"),
+							onBlur: function (event) {
+								var patch = {};
+								patch[ch.localeKey] = (event.target.value || "").trim();
+								write(patch);
+							},
+							onKeyDown: function (event) {
+								if (event.key === "Enter") {
+									event.preventDefault();
+									var patch = {};
+									patch[ch.localeKey] = (event.target.value || "").trim();
+									write(patch);
+								}
+							},
+						})
+						: null,
+				);
+			}
 
 			return E("li", { className: "dl-card" + (open ? " dl-open" : "") },
 				E("button", {
@@ -326,9 +370,17 @@ window.__ModuleLoader__.load({
 						: E("span", { className: "dl-chevron" + (open ? " dl-chevronOpen" : "") }, "▾"),
 				),
 				open ? E("div", { className: "dl-body" },
-					E("div", { className: "dl-row" },
-						E("span", { className: "dl-rowLabel" }, t("current") + ":"),
-						E("span", { className: "dl-rowValue" }, resolvedLabel),
+					E("div", { className: "dl-seg" },
+						E("button", {
+							type: "button",
+							className: "dl-segBtn",
+							onClick: function () { write({ mode: "auto", thinkMode: "auto", outMode: "auto" }); },
+						}, t("quick.syncAll")),
+						E("button", {
+							type: "button",
+							className: "dl-segBtn",
+							onClick: function () { write({ mode: "off", thinkMode: "off", outMode: "off" }); },
+						}, t("quick.offAll")),
 					),
 					E("div", { className: "dl-row" },
 						E("span", { className: "dl-rowLabel" }, t("chosen") + ":"),
@@ -338,41 +390,7 @@ window.__ModuleLoader__.load({
 						E("span", { className: "dl-rowLabel" }, t("reported") + ":"),
 						E("span", { className: "dl-rowValue" }, reported || t("none")),
 					),
-					E("div", { className: "dl-force" },
-						E("span", null, t("mode")),
-						E("div", { className: "dl-seg" },
-							modes.map(function (m) {
-								return E("button", {
-									key: m.id,
-									type: "button",
-									className: "dl-segBtn" + (mode === m.id ? " dl-segActive" : ""),
-									onClick: function () { write({ mode: m.id }); },
-								}, m.label);
-							}),
-						),
-					),
-					mode === "force"
-						? E("label", { className: "dl-force" },
-							E("span", null, t("forceLocale")),
-							E("input", {
-								className: "dl-input",
-								type: "text",
-								defaultValue: typeof value.forceLocale === "string" ? value.forceLocale : "",
-								placeholder: "zh",
-								spellCheck: false,
-								onBlur: function (event) {
-									write({ forceLocale: (event.target.value || "").trim() });
-								},
-								onKeyDown: function (event) {
-									if (event.key === "Enter") {
-										event.preventDefault();
-										write({ forceLocale: (event.target.value || "").trim() });
-									}
-								},
-							}),
-							E("span", { className: "dl-hint" }, t("forceLocale.hint")),
-						)
-						: null,
+					channels.map(channelBlock),
 					error ? E("p", { className: "dl-error" }, error) : null,
 					E("p", { className: "dl-hint" }, t("hint")),
 				) : null,
@@ -381,19 +399,13 @@ window.__ModuleLoader__.load({
 
 		// ── plugin ────────────────────────────────────────────────────────────
 
-		exports.name = "dsh-desc-lang/client";
+		exports.name = "dsh-agent-lang/client";
 
 		/** Required client services: locale runtime, settings scopes, slots. */
 		exports.inject = ["locale", "settingsScope", "slots"];
 
 		exports.apply = function (ctx) {
-			// The bound scope for THIS plugin's namespace: reads/writes route
-			// through the shared describe mirror with revision fencing, and the
-			// binder's provider fiber carries the remote dependency.
 			var scope = ctx.settingsScope.bind({ namespace: NS });
-			// Read-only view of the built-in locale namespace, for the card's
-			// detection-chain display. Bound defensively: the namespace exists
-			// wherever the locale plugin's Host half is composed.
 			var localeScope = ctx.settingsScope.bind({ namespace: LOCALE_NS });
 
 			var lastReported;
@@ -404,8 +416,6 @@ window.__ModuleLoader__.load({
 					if (!active || active === lastReported) return;
 					var previous = lastReported;
 					lastReported = active;
-					// ONE field per write: user-configured mode/forceLocale in the
-					// same namespace are per-field merges and always survive.
 					scope.set("uiLocale", active).then(
 						function () {},
 						function (error) {
@@ -421,12 +431,10 @@ window.__ModuleLoader__.load({
 			ctx.effect(function () {
 				var disposers = [ensureStyles()];
 				try {
-					// Dictionary registration is an owned effect: unloading this
-					// plugin withdraws the copy without touching other namespaces.
 					var disposeDict = ctx.locale.register(DICT_NS, { zh: zh, en: en });
 					if (typeof disposeDict === "function") disposers.push(disposeDict);
-					// Optional packs (ja/ko) ride the per-locale form: inert until a
-					// matching external language definition is active in the GUI.
+					// Optional packs (ja/ko): inert until a matching external
+					// language definition is active in the GUI.
 					try {
 						var disposeJa = ctx.locale.register(DICT_NS, "ja", ja);
 						if (typeof disposeJa === "function") disposers.push(disposeJa);
@@ -456,41 +464,35 @@ window.__ModuleLoader__.load({
 						} catch (error) { /* best effort */ }
 					}
 				};
-			}, "dsh-desc-lang: styles, dictionary, ui-locale report");
+			}, "dsh-agent-lang: styles, dictionaries, ui-locale report");
 
-			// Registration helper (the dsh-better-workspace guarded pattern): a
-			// thrown register (semantics drift, vanishing hole declaration
-			// mid-transition) degrades this one seat, never the plugin fiber.
-			var guardedCard = function () {
-				try {
-					var slots = ctx.slots;
-					if (!slots || typeof slots.register !== "function" || typeof slots.inject !== "function") {
-						console.warn(TAG + " slots service unavailable; settings card skipped");
-						return undefined;
-					}
-					return slots.inject("settings.plugin.item", function () {
-						return slots.register({
-							name: "settings.plugin.item",
-							key: NS,
-							locale: DICT_NS,
-							// The inject factory's returned members become the
-							// component's props: the two bound settings scopes ride
-							// here as PLAIN members (top-level options fields do NOT
-							// reach the component — verified against
-							// dsh-better-workspace 0.6.0, 2026-08-31).
-							inject: function () {
-								return { scope: scope, localeScope: localeScope };
-							},
-						}, function CardWithBoundary(props) {
-							return E(QuietBoundary, null, E(DescLangCard, props));
-						});
-					});
-				} catch (error) {
-					console.warn(TAG + " settings card registration failed:", error && error.message ? error.message : error);
-					return undefined;
+			// Guarded registration (the dsh-better-workspace pattern): a thrown
+			// register degrades this one seat, never the plugin fiber.
+			try {
+				var slots = ctx.slots;
+				if (!slots || typeof slots.register !== "function" || typeof slots.inject !== "function") {
+					console.warn(TAG + " slots service unavailable; settings card skipped");
+					return;
 				}
-			};
-			guardedCard();
+				slots.inject("settings.plugin.item", function () {
+					return slots.register({
+						name: "settings.plugin.item",
+						key: NS,
+						locale: DICT_NS,
+						// The inject factory's returned members become the
+						// component's props: the two bound settings scopes ride
+						// here as PLAIN members (top-level options fields do NOT
+						// reach the component).
+						inject: function () {
+							return { scope: scope, localeScope: localeScope };
+						},
+					}, function CardWithBoundary(props) {
+						return E(QuietBoundary, null, E(DescLangCard, props));
+					});
+				});
+			} catch (error) {
+				console.warn(TAG + " settings card registration failed:", error && error.message ? error.message : error);
+			}
 		};
 
 		return module.exports;

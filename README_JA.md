@@ -1,10 +1,10 @@
-# dsh-desc-lang
+# dsh-agent-lang
 
 [简体中文](README.md) | [English](README_EN.md) | 日本語 | [한국어](README_KO.md)
 
 [![Awesome DSH Plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
 
-> ツール呼び出しの description をGUI言語で —— [DeepSeek Harness (DSH)](https://www.npmjs.com/package/@deepseek-ai/dsh) のすべてのツール呼び出しにおける `description`(PTC モードの `run_code` `description`、すなわち呼び出しカードのタイトルを含む)を、**Web GUI が実際に表示している言語**で書かせます。常に英語ではなく。
+> エージェント言語制御 —— [DeepSeek Harness (DSH)](https://www.npmjs.com/package/@deepseek-ai/dsh) のモデル出力における**ツール説明・モデルの思考・回答**の3チャネルをそれぞれ設定可能:GUI言語に従う / 指定言語で強制 / オフ。ワンクリックで全同期・全オフにも対応。デフォルトはツール説明チャネルのみ有効です。
 
 ## なぜ必要か
 
@@ -31,7 +31,7 @@ DSH のツール呼び出しには必須の `description` 引数があり、そ�
 ## インストール
 
 ```bash
-dsh plugin --profile web add dsh-desc-lang
+dsh plugin --profile web add dsh-agent-lang
 ```
 
 ピュア JS、ビルドなし、インストール依存なし(schemastery は peer として profile 経由で解決)。インストール後、DSH を再起動してください。
@@ -39,7 +39,7 @@ dsh plugin --profile web add dsh-desc-lang
 ## 検証
 
 1. インストールして DSH を再起動し、**一度ハードリフレッシュ**(⌘/Ctrl+Shift+R、下記の既知の境界 #1 を参照);
-2. `~/.dsh/settings.yaml` に `desc-lang:` セクション(`uiLocale`)が現れる;
+2. `~/.dsh/settings.yaml` に `agent-lang:` セクション(`uiLocale`)が現れる;
 3. minimal 以外の任意のモードで新規セッションを実行 → ツール呼び出しカードの description が GUI 言語になる;
 4. 設定 → 全般 → 言語 を切り替える → 次のリクエストから description が追随;
 5. 設定 → プラグイン → ツール説明言語カードで動作を切り替えテスト。

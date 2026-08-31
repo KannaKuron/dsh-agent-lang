@@ -1,5 +1,5 @@
 /**
- * dsh-desc-lang — host half (plain JavaScript, no build step).
+ * dsh-agent-lang — host half (plain JavaScript, no build step).
  *
  * WHY: every tool call in DSH carries a required `description` argument that
  * is the call's always-visible UI label — the bash `description` precedent,
@@ -41,7 +41,7 @@
  *           choice, persisted by DSH itself on loopback pages); read-only
  *           here, NEVER written by this plugin;
  *        b. the `uiLocale` field of this plugin's OWN settings namespace
- *           (`desc-lang`), written by the browser half: it reports the
+ *           (`agent-lang`), written by the browser half: it reports the
  *           locale runtime's ACTIVE locale, which covers the "user never
  *           picked a language" case (browser navigator match) that leaves
  *           no trace in Host settings;
@@ -49,7 +49,7 @@
  *           behavior; an English directive would only add prompt noise).
  *
  * The browser half (src/client.js) is the reporter AND the settings card:
- * it pushes the active locale into `desc-lang.uiLocale` and renders the
+ * it pushes the active locale into `agent-lang.uiLocale` and renders the
  * Settings → Plugins card (`settings.plugin.item` keyed by the namespace)
  * that switches mode / forceLocale.
  *
@@ -68,7 +68,7 @@
  * satisfies both.
  */
 /** Plugin identity for cordis.yml rows. */
-export const name = 'dsh-desc-lang'
+export const name = 'dsh-agent-lang'
 
 /**
  * No hard services: both `settings` and `systemPrompt` are injected
@@ -78,7 +78,7 @@ export const name = 'dsh-desc-lang'
 export const inject = []
 
 /** This plugin's own settings namespace (grammar: lowercase/digit/hyphen). */
-export const SETTINGS_NAMESPACE = 'desc-lang'
+export const SETTINGS_NAMESPACE = 'agent-lang'
 
 /**
  * The built-in locale plugin's durable namespace, read-only here:
@@ -89,7 +89,7 @@ export const SETTINGS_NAMESPACE = 'desc-lang'
 const LOCALE_NAMESPACE = 'locale'
 
 /** Runtime-context identity (globally unique; duplicates throw). */
-const CONTEXT_NAME = 'desc-lang:ui-language'
+const CONTEXT_NAME = 'agent-lang:ui-language'
 
 /**
  * Slot after the centrally allocated CONTEXT_ORDERS entries (SANDBOX_POLICY
@@ -111,7 +111,7 @@ const LANGUAGE_SELF_NAMES = {
   zh: '简体中文',
 }
 
-const TAG = '[desc-lang]'
+const TAG = '[agent-lang]'
 
 // ── pure helpers (exported for tests) ────────────────────────────────────────
 
@@ -173,6 +173,60 @@ export function buildLanguageDirective(lang) {
     + 'Keep each description short and specific; code identifiers, file paths, and commands stay in their original script.'
 }
 
+/**
+ * Resolve ONE channel's language from its own mode/locale pair plus the
+ * shared detection chain. Same rules as {@link pickDisplayLanguage}: off →
+ * undefined; force+valid tag → the tag; auto → preference over report.
+ * @param {object} [channel]
+ * @param {string} [channel.mode] - 'auto' | 'off' | 'force'.
+ * @param {string} [channel.locale] - the channel's forced tag.
+ * @param {string} [channel.preference] - explicit Settings→General choice.
+ * @param {string} [channel.reported] - browser-reported active locale.
+ * @returns {string | undefined} the channel's language, or undefined.
+ */
+export function resolveChannelLanguage({ mode = 'auto', locale, preference, reported } = {}) {
+  return pickDisplayLanguage({ mode, forceLocale: locale, preference, reported })
+}
+
+/**
+ * Build the combined directive text for all three channels (descriptions,
+ * thinking, replies) — still ONE compact runtime-context entry. Each enabled
+ * channel contributes one sentence; the desc sentence keeps the full
+ * schema-override rationale (it fights the hardest against the English tool
+ * schemas), while think/output state their rule plainly. Returns '' when
+ * nothing is enabled or everything resolves to English.
+ * @param {object} input - resolved settings plus the detection chain.
+ * @param {string} [input.preference] - explicit user language choice.
+ * @param {string} [input.reported] - browser-reported locale.
+ * @param {string} [input.descMode] - tool-descriptions channel mode.
+ * @param {string} [input.descLocale] - tool-descriptions forced tag.
+ * @param {string} [input.thinkMode] - thinking channel mode.
+ * @param {string} [input.thinkLocale] - thinking forced tag.
+ * @param {string} [input.outMode] - replies channel mode.
+ * @param {string} [input.outLocale] - replies forced tag.
+ * @returns {string} the context text ('' = contribute nothing).
+ */
+export function buildChannelDirectives(input = {}) {
+  const chain = { preference: input.preference, reported: input.reported }
+  const parts = []
+  // Contract defaults: an omitted desc channel keeps the plugin's original
+  // behavior (auto), while omitted think/out channels stay OFF — an unset
+  // optional channel must never silently start overriding the model.
+  const desc = resolveChannelLanguage({ mode: input.descMode ?? 'auto', locale: input.descLocale, ...chain })
+  const think = resolveChannelLanguage({ mode: input.thinkMode ?? 'off', locale: input.thinkLocale, ...chain })
+  const out = resolveChannelLanguage({ mode: input.outMode ?? 'off', locale: input.outLocale, ...chain })
+  if (desc) parts.push(buildLanguageDirective(desc))
+  if (think) {
+    const selfName = languageSelfName(think)
+    parts.push(`Do your internal reasoning (your private thinking) in ${selfName} (${think}) as well.`)
+  }
+  if (out) {
+    const selfName = languageSelfName(out)
+    parts.push(`Write your final user-facing replies in ${selfName} (${out}), regardless of the language the user types in.`)
+  }
+  return parts.join(' ')
+}
+
 /** Test surface: constants and pure helpers for helper-level tests. */
 export const _internal = {
   SETTINGS_NAMESPACE,
@@ -183,8 +237,10 @@ export const _internal = {
   MODE_PATTERN,
   LANGUAGE_SELF_NAMES,
   pickDisplayLanguage,
+  resolveChannelLanguage,
   languageSelfName,
   buildLanguageDirective,
+  buildChannelDirectives,
 }
 
 // ── plugin ──────────────────────────────────────────────────────────────────
@@ -222,14 +278,24 @@ export function apply(ctx) {
             : SETTINGS_NAMESPACE
           const schema = Schema.object({
             // Browser-reported active GUI locale; the client half writes
-            // ONLY this field, so user-configured mode/forceLocale survive
+            // ONLY this field, so user-configured modes/locales survive
             // every report (settings writes are per-field deep merges).
             uiLocale: Schema.string().pattern(BCP47).required(false),
+            // ── channel: tool-call descriptions (the original fields; the
+            // backward-compatible read path maps these onto the desc channel).
             // auto = follow the detected GUI language; off = contribute
             // nothing; force = always forceLocale.
             mode: Schema.string().pattern(MODE_PATTERN).default('auto'),
-            // Language to force when mode is 'force'.
             forceLocale: Schema.string().pattern(BCP47).required(false),
+            // ── channel: model thinking. Defaults to OFF: reasoning language
+            // can affect quality, so the model's natural behavior stays until
+            // the user opts in.
+            thinkMode: Schema.string().pattern(MODE_PATTERN).default('off'),
+            thinkLocale: Schema.string().pattern(BCP47).required(false),
+            // ── channel: user-facing replies. Defaults to OFF: the untouched
+            // behavior is "reply in the language the user typed in".
+            outMode: Schema.string().pattern(MODE_PATTERN).default('off'),
+            outLocale: Schema.string().pattern(BCP47).required(false),
           })
           settings.register(ns, schema)
           log(`${TAG} settings namespace registered: ${SETTINGS_NAMESPACE}`)
@@ -267,17 +333,24 @@ export function apply(ctx) {
               // deployment without it (no web surface) settings.get resolves
               // undefined and the reported chain carries the language alone.
               const locale = settings?.get?.(LOCALE_NAMESPACE)
-              return buildLanguageDirective(pickDisplayLanguage({
-                mode: own.mode,
-                forceLocale: own.forceLocale,
+              // Three channels: descriptions (the original mode/forceLocale
+              // fields), thinking, and replies — each independently
+              // auto/force/off; disabled channels contribute nothing.
+              return buildChannelDirectives({
                 preference: locale?.preference,
                 reported: own.uiLocale,
-              }))
+                descMode: own.mode,
+                descLocale: own.forceLocale,
+                thinkMode: own.thinkMode,
+                thinkLocale: own.thinkLocale,
+                outMode: own.outMode,
+                outLocale: own.outLocale,
+              })
             } catch {
               return ''
             }
           },
-        }), 'dsh-desc-lang: ui-language context')
+        }), 'dsh-agent-lang: ui-language context')
         log(`${TAG} ui-language directive context active (${CONTEXT_NAME})`)
       } catch (error) {
         log(`${TAG} context registration failed: ${error?.message ?? error}`)

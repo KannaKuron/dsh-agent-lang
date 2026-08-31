@@ -1,10 +1,10 @@
-# dsh-desc-lang
+# dsh-agent-lang
 
 简体中文 | [English](README_EN.md) | [日本語](README_JA.md) | [한국어](README_KO.md)
 
 [![Awesome DSH Plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
 
-> 工具调用的描述跟随界面语言 —— 让 [DeepSeek Harness (DSH)](https://www.npmjs.com/package/@deepseek-ai/dsh) 里每个工具调用的 `description`(包括 PTC 模式 `run_code` 的 `description`,也就是工具卡片标题)自动用**你界面正在显示的语言**书写,而不是永远英文。
+> Agent 语言控制 —— 让 [DeepSeek Harness (DSH)](https://www.npmjs.com/package/@deepseek-ai/dsh) 里模型的**工具描述、思考、回复输出**三个通道的语言各自可配:跟随界面语言、强制指定语言、或关闭,支持一键全部跟随/一键全关。默认只开工具描述通道(含 PTC 模式 `run_code` 的 `description`,即工具卡片标题)跟随界面语言,替代永远英文。
 
 ## 为什么需要它
 
@@ -27,7 +27,7 @@ DSH 里每一次工具调用的 `description` 参数都是必填的,而且**原�
 ```
 浏览器(GUI)                          DSH Host 进程
 ┌─────────────────────┐   上报当前界面语言   ┌──────────────────────────────┐
-│ locale 运行时        │ ─────────────────▶ │ settings ns「desc-lang」       │
+│ locale 运行时        │ ─────────────────▶ │ settings ns「agent-lang」       │
 │ (显式选择,或浏览器    │  (只写 uiLocale 字段) │   .uiLocale  ← 浏览器上报     │
 │  navigator 匹配)     │                    │   .mode/.forceLocale ← 设置卡片 │
 └─────────────────────┘                    │ settings ns「locale」(只读)     │
@@ -47,8 +47,8 @@ DSH 里每一次工具调用的 `description` 参数都是必填的,而且**原�
 ## 安装
 
 ```bash
-dsh plugin --profile web add dsh-desc-lang   # npm 公开包
-# 源码与 Release: https://github.com/KannaKuron/dsh-desc-lang
+dsh plugin --profile web add dsh-agent-lang   # npm 公开包
+# 源码与 Release: https://github.com/KannaKuron/dsh-agent-lang
 ```
 
 纯 JS、零构建、零安装依赖(schemastery 以 peer 声明,经 profile 共享解析),安装不触发构建脚本。装完重启 DSH,打开任意会话即可;设置 → 插件 里可找到「工具描述语言」卡片。
@@ -65,7 +65,7 @@ pnpm add <tarball 路径>          # package.json 的 dsh.bundle.patch 声明会
 ## 验证
 
 1. 安装并重启 DSH,**硬刷新一次页面**(⌘/Ctrl+Shift+R,见「已知边界」第 1 条),打开 Web GUI(浏览器语言或设置选择为中文);
-2. `~/.dsh/settings.yaml` 出现 `desc-lang:` 段(`uiLocale: zh`,页面加载后);
+2. `~/.dsh/settings.yaml` 出现 `agent-lang:` 段(`uiLocale: zh`,页面加载后);
 3. 新建任意模式的会话,让模型跑几步工具调用——卡片描述应为中文;
 4. 设置 → 通用 → 语言 里切换语言,再发一条消息——下一轮请求描述即切换;
 5. 设置 → 插件 → 工具描述语言:切到「强制指定语言」填 `ja`,描述变日文;切「关闭」回到英文。
