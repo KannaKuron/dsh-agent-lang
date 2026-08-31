@@ -109,6 +109,8 @@ const MODE_PATTERN = /^(auto|off|force)$/
 /** Language id → the language's own name, as the model should see it. */
 const LANGUAGE_SELF_NAMES = {
   zh: '简体中文',
+  ja: '日本語',
+  ko: '한국어',
 }
 
 const TAG = '[agent-lang]'
@@ -169,8 +171,8 @@ export function buildLanguageDirective(lang) {
   if (typeof lang !== 'string' || lang.length === 0) return ''
   if (lang.toLowerCase() === 'en') return ''
   const selfName = languageSelfName(lang)
-  return `Tool-call descriptions must be written in ${selfName} (${lang}) — the user's web GUI display language — not in English; this includes run_code's \`description\` in PTC mode, and the English wording and examples inside tool schemas are format guidance only. `
-    + 'Keep each description short and specific; code identifiers, file paths, and commands stay in their original script.'
+  return `Write tool-call descriptions in ${selfName}, not in English; the English wording in tool schemas is format guidance only, including run_code's \`description\` in PTC mode. `
+    + 'Keep descriptions short; identifiers, paths, and commands stay in their original script.'
 }
 
 /**
@@ -208,23 +210,48 @@ export function resolveChannelLanguage({ mode = 'auto', locale, preference, repo
  */
 export function buildChannelDirectives(input = {}) {
   const chain = { preference: input.preference, reported: input.reported }
-  const parts = []
   // Contract defaults: an omitted desc channel keeps the plugin's original
   // behavior (auto), while omitted think/out channels stay OFF — an unset
   // optional channel must never silently start overriding the model.
   const desc = resolveChannelLanguage({ mode: input.descMode ?? 'auto', locale: input.descLocale, ...chain })
   const think = resolveChannelLanguage({ mode: input.thinkMode ?? 'off', locale: input.thinkLocale, ...chain })
   const out = resolveChannelLanguage({ mode: input.outMode ?? 'off', locale: input.outLocale, ...chain })
-  if (desc) parts.push(buildLanguageDirective(desc))
-  if (think) {
-    const selfName = languageSelfName(think)
-    parts.push(`Do your internal reasoning (your private thinking) in ${selfName} (${think}) as well.`)
+  if (!desc && !think && !out) return ''
+  // Compact assembly (2026-08-31 rewrite, replaces the per-channel sentences):
+  // one leading supersede clause, then ONE sentence for the languages —
+  // channels sharing a language merge into a single clause; differing
+  // languages get one clause each — and the schema-override rationale is
+  // appended only while the descriptions channel is enabled (it is the only
+  // channel that must beat the English examples baked into tool schemas).
+  const names = []
+  if (desc) names.push('tool-call descriptions')
+  if (think) names.push('internal reasoning (thinking)')
+  if (out) names.push('user-facing replies')
+  const langs = [desc, think, out].filter(Boolean)
+  const distinct = [...new Set(langs.map(id => id.toLowerCase()))]
+  let sentence
+  if (distinct.length === 1) {
+    const all = names.length > 1 ? ' all' : ''
+    sentence = `${joinNames(names)} must${all} be written in ${languageSelfName(langs[0])}, not in English`
+  } else {
+    const clauses = []
+    if (desc) clauses.push(`tool-call descriptions in ${languageSelfName(desc)}`)
+    if (think) clauses.push(`internal reasoning in ${languageSelfName(think)}`)
+    if (out) clauses.push(`user-facing replies in ${languageSelfName(out)}`)
+    sentence = `Write ${joinNames(clauses)}`
   }
-  if (out) {
-    const selfName = languageSelfName(out)
-    parts.push(`Write your final user-facing replies in ${selfName} (${out}), regardless of the language the user types in.`)
+  const parts = [sentence]
+  if (desc) {
+    parts.push('the English wording in tool schemas is format guidance only, including run_code\'s \`description\` in PTC mode; keep descriptions short, with identifiers, paths, and commands in their original script')
   }
-  return parts.join(' ')
+  return `Current language rules supersede earlier language directives. ${parts.join('; ')}.`
+}
+
+/** Join 2-3 names/clauses with commas and a final "and" (Oxford). */
+function joinNames(items) {
+  if (items.length <= 1) return items[0] ?? ''
+  if (items.length === 2) return items[0] + ' and ' + items[1]
+  return items[0] + ', ' + items[1] + ', and ' + items[2]
 }
 
 /** Test surface: constants and pure helpers for helper-level tests. */

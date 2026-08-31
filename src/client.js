@@ -135,6 +135,8 @@ window.__ModuleLoader__.load({
 			var key = id.toLowerCase();
 			if (key === "en") return "English";
 			if (key === "zh") return "简体中文";
+			if (key === "ja") return "日本語";
+			if (key === "ko") return "한국어";
 			return '"' + id + '"';
 		}
 

@@ -66,7 +66,9 @@ test('languageSelfName: built-ins and unknown packs', () => {
   assert.equal(languageSelfName('zh'), '简体中文')
   assert.equal(languageSelfName('ZH'), '简体中文')
   assert.equal(languageSelfName('en'), 'English')
-  assert.equal(languageSelfName('ja'), 'the language with BCP-47 tag "ja"')
+  assert.equal(languageSelfName('ja'), '日本語')
+  assert.equal(languageSelfName('ko'), '한국어')
+  assert.equal(languageSelfName('x-custom'), 'the language with BCP-47 tag "x-custom"')
 })
 
 test('buildLanguageDirective: zh mentions the run_code description and the self name', () => {
@@ -84,9 +86,11 @@ test('buildLanguageDirective: English and absent contribute nothing', () => {
   assert.equal(buildLanguageDirective(''), '')
 })
 
-test('buildLanguageDirective: unknown tags still produce a directive', () => {
-  const text = buildLanguageDirective('ja')
-  assert.match(text, /BCP-47 tag "ja"/)
+test('buildLanguageDirective: builtin ja/ko use native names; unknown tags fall back to the tag itself', () => {
+  assert.match(buildLanguageDirective('ja'), /日本語/)
+  assert.match(buildLanguageDirective('ko'), /한국어/)
+  const text = buildLanguageDirective('x-custom')
+  assert.match(text, /BCP-47 tag "x-custom"/)
   assert.ok(text.length > 0)
 })
 
@@ -100,25 +104,41 @@ test('resolveChannelLanguage: per-channel modes resolve independently', () => {
   assert.equal(resolveChannelLanguage({ mode: 'force', locale: 'not a tag!', ...chain }), 'zh')
 })
 
-test('buildChannelDirectives: defaults (think/out off) equal the desc-only text', () => {
+test('buildChannelDirectives: supersede clause + compact single-channel text', () => {
   const chain = { preference: 'zh', reported: 'zh' }
   const only = buildChannelDirectives({ descMode: 'auto', ...chain })
-  assert.equal(only, buildLanguageDirective('zh'))
+  // leading supersede clause present on every non-empty emission
+  assert.match(only, /^Current language rules supersede earlier language directives\./)
+  assert.match(only, /tool-call descriptions must be written in 简体中文, not in English/)
+  assert.match(only, /format guidance only, including run_code's `description`/)
   // everything off → nothing
   assert.equal(buildChannelDirectives({ descMode: 'off', thinkMode: 'off', outMode: 'off', ...chain }), '')
 })
 
-test('buildChannelDirectives: enabled think/out contribute their sentences', () => {
+test('buildChannelDirectives: same-language channels merge into one clause', () => {
   const text = buildChannelDirectives({
     preference: 'zh',
     descMode: 'auto',
     thinkMode: 'auto',
+    outMode: 'auto',
+  })
+  assert.match(text, /tool-call descriptions, internal reasoning \(thinking\), and user-facing replies must all be written in 简体中文, not in English/)
+  // BUDGET: the merged all-on emission stays under 420 chars (regression guard
+  // against prompt bloat; the 2026-08-31 rewrite brought it from 528 to ~383)
+  assert.ok(text.length <= 420, 'all-on directive grew past budget: ' + text.length)
+})
+
+test('buildChannelDirectives: differing languages get one clause each', () => {
+  const text = buildChannelDirectives({
+    preference: 'zh',
+    descMode: 'auto',
+    thinkMode: 'off',
     outMode: 'force',
     outLocale: 'ja',
   })
-  assert.match(text, /Tool-call descriptions must be written in 简体中文/)
-  assert.match(text, /internal reasoning .* in 简体中文 \(zh\) as well/)
-  assert.match(text, /final user-facing replies in the language with BCP-47 tag "ja" \(ja\)/)
+  assert.match(text, /Write tool-call descriptions in 简体中文 and user-facing replies in 日本語/)
+  // self-name table covers ja/ko natively now (no verbose BCP-47 fallback)
+  assert.doesNotMatch(text, /BCP-47 tag/)
 })
 
 // ── host half source discipline ──────────────────────────────────────────────
