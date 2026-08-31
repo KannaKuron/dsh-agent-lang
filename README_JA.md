@@ -2,8 +2,6 @@
 
 [简体中文](README.md) | [English](README_EN.md) | 日本語 | [한국어](README_KO.md)
 
-[![Awesome DSH Plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
-
 > エージェント言語制御 —— [DeepSeek Harness (DSH)](https://www.npmjs.com/package/@deepseek-ai/dsh) のモデル出力における**ツール説明・モデルの思考・回答**の3チャネルをそれぞれ設定可能:GUI言語に従う / 指定言語で強制 / オフ。ワンクリックで全同期・全オフにも対応。デフォルトはツール説明チャネルのみ有効です。
 
 ## なぜ必要か

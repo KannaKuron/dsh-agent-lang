@@ -2,8 +2,6 @@
 
 简体中文 | [English](README_EN.md) | [日本語](README_JA.md) | [한국어](README_KO.md)
 
-[![Awesome DSH Plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
-
 > Agent 语言控制 —— 让 [DeepSeek Harness (DSH)](https://www.npmjs.com/package/@deepseek-ai/dsh) 里模型的**工具描述、思考、回复输出**三个通道的语言各自可配:跟随界面语言、强制指定语言、或关闭,支持一键全部跟随/一键全关。默认只开工具描述通道(含 PTC 模式 `run_code` 的 `description`,即工具卡片标题)跟随界面语言,替代永远英文。
 
 ## 为什么需要它

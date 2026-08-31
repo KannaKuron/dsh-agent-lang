@@ -2,8 +2,6 @@
 
 [简体中文](README.md) | [English](README_EN.md) | [日本語](README_JA.md) | 한국어
 
-[![Awesome DSH Plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
-
 > 에이전트 언어 제어 —— [DeepSeek Harness (DSH)](https://www.npmjs.com/package/@deepseek-ai/dsh) 모델 출력의 **도구 설명·모델 사고·응답** 세 채널을 각각 설정:GUI 언어 따르기 / 지정 언어 강제 / 끄기,원클릭 전체 동기화·전체 끄기 지원. 기본은 도구 설명 채널만 켜져 있습니다.
 
 ## 왜 필요한가

@@ -2,8 +2,6 @@
 
 [简体中文](README.md) | English | [日本語](README_JA.md) | [한국어](README_KO.md)
 
-[![Awesome DSH Plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
-
 > Agent language control — three independently configured channels for [DeepSeek Harness (DSH)](https://www.npmjs.com/package/@deepseek-ai/dsh) model output: **tool-call descriptions** (including PTC mode's `run_code` `description`, the call card title), **model thinking**, and **replies** — each follows the GUI language, forces a fixed language, or turns off, with one-click sync-all / off-all shortcuts. By default only the descriptions channel is on.
 
 ## Why
