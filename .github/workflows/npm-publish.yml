@@ -1,7 +1,7 @@
 name: npm-publish
 
 # Family convention: release/published triggers the publish (see workspace AGENTS.md).
-# Trusted publishing (OIDC) — no npm token needed:
+# Trusted publishing (OIDC) — npmjs.com package settings declare this file as trusted publisher. — no npm token needed:
 # npmjs.com package settings must declare this workflow file name
 # (npm-publish.yml) as a trusted publisher for the matching repo.
 on:
