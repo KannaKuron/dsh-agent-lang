@@ -33,10 +33,12 @@
 7. **词典纪律**:NS = descLang;zh/en 词典 key 完全对齐且覆盖每个静态 t(...) 调用,冒烟测试逐 key 校验。语言自称映射(zh→简体中文)host/client 各一份,改要同步。
 8. **React 纪律**:纯 React.createElement;组件定义在模块层(内联定义会在父渲染时重挂载);所有 hooks 先于任何 early return;primitives 图标经特征探测降级(`icon()` 失败回退文本 ▾)。
 9. **context order 125** 是自由槽位,排在官方 CONTEXT_ORDERS(SANDBOX_POLICY 110 / APPROVAL_POLICY 115 / SUBAGENT_DELEGATION 120)之后;若官方表扩张越过 125,换一个空闲数。
+10. **slot 注册 options 的顶层字段不会传给组件**(2026-08-31 实测:首版把 scope/localeScope 放顶层,组件 props.scope 为 undefined,useSyncExternalStore(undefined.subscribe) 渲染即崩,卡片无声消失而上报链路照常)。只有协议字段生效:`locale` 绑 t、`store` 绑 store seat、**`inject` 工厂返回的成员按原名成为 props**(hooks 子对象绑成 useXxx)。传对象一律走 inject 工厂;组件外再包 QuietBoundary(渲染失败只废本卡)。对照范本:已安装的 dsh-better-workspace 0.6.0(sandbox 里的开发副本可能滞后,以 profile node_modules 里实际装的版本为准)。
+11. **host 半读未声明服务必须 `ctx.get('name')`**:`ctx.inject(['systemPrompt'], (pctx) => ...)` 的 pctx 只有声明过的服务可作属性访问,`pctx.settings?.get?.(...)` 这种未声明属性读取**静默 undefined**(可选链连错都不报),指示因此永远空文本(2026-08-31 实测:卡片/上报全正常但指示从未注入,agent 描述依旧英文)。测试已锁定 `pctx.get('settings')` 形态。
 
 ## 验证清单(改动后)
 
-1. `npm test` 全绿(22 项)。
+1. `npm test` 全绿(23 项)。
 2. 真机(web profile 重启 DSH):
    - 页面加载后 `~/.dsh/settings.yaml` 出现 `desc-lang:` 段(`uiLocale` 为当前界面语言);
    - 任意非 minimal 模式新会话:工具调用卡片描述为界面语言(中文界面→中文描述);
