@@ -1,0 +1,19 @@
+# dsh-desc-lang bundle patch
+#
+# Installed through the official CLI:
+#
+#   dsh plugin --profile web add dsh-desc-lang
+#
+# the command reconciles `dsh.profile.bundles` against installed packages and,
+# seeing this declaration, appends dsh-desc-lang to the bundle stack. The
+# profile boot then merges this patch (a single `insert` of the plugin row),
+# mounting the plugin globally on the HOST plane — which is the point: the
+# prompt section it registers applies to EVERY agent preset (standard, ptc,
+# cordis, user presets) in the process, not to one preset.
+#
+# If a profile already carries a manual mount line for this plugin in its own
+# cordis.patch.yml, remove it before switching to the bundle channel to avoid
+# double-mounting.
+- insert:
+    - id: desc-lang
+      name: 'dsh-desc-lang'
