@@ -9,7 +9,7 @@
 ## 环境与工具
 
 - 本机已安装 GitHub CLI(`gh`,已认证 KannaKuron):建仓、推送、release 优先用 gh。
-- 发布双通道家族惯例(2026-08-31 起 npm-publish workflow 已删,后续统一重建):`npm test` → `npm version` → `git push --tags` → `gh release create`;正式上 npm 时恢复 OIDC workflow(Release published 触发),发布后 `curl -X PUT https://registry.npmmirror.com/dsh-agent-lang/sync` 同步 npmmirror。
+- 发布(2026-08-31 起 npm OIDC 全链路已就绪,与 dsh-better-workspace 同款):bootstrap 首版 0.3.0 已在 npmjs 建包,Trusted Publisher 已登记(repo=KannaKuron/dsh-agent-lang,file=.\.github/workflows/npm-publish.yml,permissions=publish);**日常发版**:`npm test` 全绿 → 改版本(package.json 与 dsh.plugin.json 两个都改且一致)→ `git tag vX.Y.Z && git push origin main --tags` → 仓库目录内 `gh release create vX.Y.Z --title "vX.Y.Z" --generate-notes` → Release published 触发 OIDC workflow(node 24 + id-token: write,零令牌)自动发 npm → `gh run watch <id> --exit-status` 看绿 → `npm view dsh-agent-lang version --registry=https://registry.npmjs.org` 确认 → `curl -X PUT https://registry.npmmirror.com/dsh-agent-lang/sync` 同步 npmmirror。
 - 本机 web profile 装本地开发版:`npm pack` 出 tarball → 在 `(dsh home)/profiles/web` 里 `pnpm add <tarball>` → 重启 DSH(`package.json` 的 `dsh.bundle.patch` 声明自动挂载,无需手改 profile patch)。
 
 ## 目录地图

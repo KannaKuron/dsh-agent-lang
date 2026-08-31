@@ -1,6 +1,6 @@
 {
   "id": "dsh-external/dsh-agent-lang",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "main": "./src/index.js",
   "description": "工具调用描述跟随界面语言:自动检测 Web GUI 显示语言(设置里的显式选择优先,浏览器上报的当前语言兜底),为所有预设注入一条全局动态提示词 section,让每个工具调用的 description —— 包括 PTC 模式 run_code 的 description —— 用界面语言书写。不修改任何 preset 或工具 schema。",
   "engines": {
