@@ -14,6 +14,16 @@
 
 - **发布事故处置(2026-08-31,v0.3.1 实际教训)**:workflow 文件在发布周期内被「删除→恢复」或仓库 Actions 被 toggle 后,GitHub 会要求**文件内容发生变化**才重新注册(re-touch 无内容变化的 commit 无效),且**半激活期创建的 run 会永久卡 queued(连 job 都不生成,jobs = 0 是铁证)**——事件流有 ReleaseEvent 但 actions/runs total_count 为 0 = 事件根本没触发 workflow。处置:① 修改 workflow(内容变化,如加 `workflow_dispatch:`)并 push;② `gh run cancel` 作废卡死的 queued run;③ 重新 `gh workflow run` 手动触发(本 workflow 已带 `workflow_dispatch`,应急补发不需要再发假 release);④ 跑绿后 `npm view <pkg> version --registry=https://registry.npmjs.org` 确认 → npmmirror 同步。诊断命令:`gh run list --repo <repo> --limit 5`、`gh api repos/<repo>/actions/runs --jq .total_count`(0 = 从未触发)、`gh run view <id> --json status,conclusion`。
 
+## 变更记录纪律(2026-09-13 起)
+
+- **所有版本发布、修复、事故复盘、复现/验证记录一律写进本仓库 `CHANGELOG.md`**,不再追加进本文件;
+  本文件只保留仍然有效的规则、不变量与当前事实,历史叙事由 CHANGELOG 承载(需引用时写
+  「见 CHANGELOG vX.Y.Z」)。
+- **发版流程新增强制步骤**:更新 CHANGELOG(写好新版本条目)→ 随版本提交 → 再打 tag /
+  发 Release;顺序不能反。
+- CHANGELOG 条目格式:倒序排列;`## vX.Y.Z — YYYY-MM-DD` + 类型(feat / fix / docs / chore)+
+  要点 bullet + 相关链接(issue / PR / discussion / Release)。
+
 ## 目录地图
 
 | 路径 | 作用 |
