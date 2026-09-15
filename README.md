@@ -70,6 +70,14 @@ pnpm add <tarball 路径>          # package.json 的 dsh.bundle.patch 声明会
 4. 设置 → 通用 → 语言 里切换语言,再发一条消息——下一轮请求描述即切换;
 5. 设置 → 插件 → 工具描述语言:切到「强制指定语言」,下拉选 `ja`(或自填标签),描述变日文;切「关闭」回到英文。
 
+## 版本兼容
+
+**dsh 0.1.6-alpha.1 已逐项核对通过,无需代码改动**(核对记录见 CHANGELOG v0.4.3):
+
+- `systemPrompt.context()` 契约未变:`PromptContext` 仍是 `{ name, order, text }`,order 125 仍在官方 CONTEXT_ORDERS 之后;新版只给 **sections** 加了 `interpolate: false`,不涉及 context 贡献。
+- 注入文本不存在 `{{...}}` 插值风险:三条语言来源(强制标签 / 设置里的显式选择 / 浏览器上报)全部经 BCP47 校验后才进入文本。
+- 图标与槽位契约(`settings.plugin.item`)、settings / locale 服务均无变化。
+
 ## 已知边界
 
 - **新装/更新后的首次启动需硬刷新一次**(2026-08-31 真机实测):首次页面加载可能赶上客户端模块表重建(combo revision 变化),新装包被暂时排除——表现为设置卡片未出现,但 `settings.yaml` 已有 `uiLocale` 上报痕迹(上报先于剔除发生)。硬刷新(⌘/Ctrl+Shift+R)即恢复;日常重启不复发。

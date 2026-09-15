@@ -44,6 +44,14 @@ Plain JS, no build step, no installed dependencies (schemastery is a peer resolv
 4. Switch the GUI language in Settings → General — descriptions switch on the next request;
 5. Settings → Plugins → Tool Description Language: pick `ja` from the force-language dropdown (or type any tag), switch off, etc.
 
+## Version compatibility
+
+**dsh 0.1.6-alpha.1 was checked item by item and needs no code change** (record: CHANGELOG v0.4.3):
+
+- The `systemPrompt.context()` contract is unchanged: `PromptContext` is still `{ name, order, text }`, with order 125 still after the official CONTEXT_ORDERS. The new `interpolate: false` applies to **sections** only, which this plugin does not use.
+- The injected text carries no `{{...}}` interpolation risk: every language source (forced tag, explicit setting, browser report) passes BCP47 validation before it reaches the text.
+- Icons, the `settings.plugin.item` slot, and the settings / locale service contracts are unchanged.
+
 ## Known limits
 
 - `minimal` is sealed by design (see table).

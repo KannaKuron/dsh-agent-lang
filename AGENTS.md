@@ -51,11 +51,11 @@
 
 ## 验证清单(改动后)
 
-1. `npm test` 全绿(28 项)。
+1. `npm test` 全绿(29 项)。
 2. 真机(web profile 重启 DSH):
    - 页面加载后 `~/.dsh/settings.yaml` 出现 `agent-lang:` 段(`uiLocale` 为当前界面语言);
    - 任意非 minimal 模式新会话:工具调用卡片描述为界面语言(中文界面→中文描述);
    - 设置 → 通用 → 语言 切换语言:下一轮请求描述跟随切换;
    - 设置 → 插件 → 工具描述语言卡片:三段切换、强制语言输入、检测链显示;
    - `minimal` 模式:确认不注入(设计边界)。
-3. 升级 dsh 后复核:`settings.plugin.item` slot 契约(ui-settings-plugins 的 slot-contract.ts)、`SettingsScope` 接口(ui-settings 的 settings-contract.ts)、`systemPrompt.context` 签名(system-prompt)、CONTEXT_ORDERS 表是否越过 125。
+3. 升级 dsh 后复核:`settings.plugin.item` slot 契约(ui-settings-plugins 的 slot-contract.ts)、`SettingsScope` 接口(ui-settings 的 settings-contract.ts)、`systemPrompt.context` 签名(system-prompt)、CONTEXT_ORDERS 表是否越过 125。**2026-09-15 已对 dsh 0.1.6-alpha.1 复核通过**:四项均无变化;另确认注入文本**无 `{{...}}` 插值风险**——渲染期插值对 malformed / unknown 引用会抛错,而三条语言来源全程经 `BCP47.test()` 校验,这条校验链是必须保持的不变量(记录见 CHANGELOG v0.4.3)。
