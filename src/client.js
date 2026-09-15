@@ -109,7 +109,27 @@ window.__ModuleLoader__.load({
 		var LOCALE_NS = "locale";
 		var DICT_NS = "agentLang";
 
-		// ── locale dictionaries (all four MUST stay key-aligned; smoke-enforced) ──
+		// ── locale dictionaries (every one MUST stay key-aligned with zh) ───────
+		//
+		// A missing key silently falls back to English at lookup time, which leaves
+		// the settings card half-translated; tests/smoke.mjs compares every shipped
+		// dictionary against `zh` so a new string cannot land in zh and en alone.
+		// Adding a language is ONE entry in LOCALES and nothing else — the same
+		// registration call publishes whatever the table holds.
+		//
+		// These dictionaries are handed to the DSH locale registry under DICT_NS,
+		// and the card reads them through the `t` seat its registration binds
+		// (`locale: DICT_NS`). That seat IS the live lookup: the render machinery
+		// subscribes to the locale runtime and re-derives `t` on every revision, so
+		// a language switch repaints the card at once — nothing here is resolved or
+		// frozen at apply time.
+		//
+		// A shipped dictionary stays inert until the GUI actually runs that
+		// language, i.e. until a language pack registers the tag in the locale
+		// catalog (ctx.locale.addLanguage, as dsh-i18n does). This plugin does NOT
+		// add languages itself on purpose: that would offer half-translated
+		// languages in Settings → General → Language, because the shell's own
+		// dictionaries are not ours to ship.
 
 		var zh = {
 			"title": "语言控制",
@@ -149,54 +169,418 @@ window.__ModuleLoader__.load({
 			"hint": "Three independent channels: follow GUI / force a tag / off (thinking and replies default to off, preserving current behavior). Detection order: the explicit Settings → General → Language choice over the browser report. Changes apply on the next request; the minimal preset seals its prompt and is out of scope.",
 		};
 
-		// Optional language packs: registered per-locale, inert until a matching
-		// external language definition (ja/ko) is active in the GUI.
-		var ja = {
-			"title": "言語制御",
-			"cardDesc": "ツール説明・モデルの思考・回答をそれぞれGUI言語または指定言語で",
-			"mode.auto": "GUI言語に従う",
-			"mode.force": "言語を指定",
-			"mode.off": "オフ",
-			"quick.syncAll": "すべてGUI言語に",
-			"quick.offAll": "すべてオフ",
-			"chan.desc": "ツール説明",
-			"chan.think": "モデルの思考",
-			"chan.output": "回答出力",
-			"chosen": "設定での明示的な選択",
-			"reported": "ブラウザー報告",
-			"undetected": "言語未検出(注入なし)",
-			"none": "—",
-			"error": "書き込み失敗",
-			"hint": "3つのチャネルを独立に設定:GUI言語に従う / 指定 / オフ(思考と回答は現状維持のためデフォルトはオフ)。検出順序:設定 → 全般 → 言語の明示的な選択がブラウザー報告に優先。切り替えは次のリクエストから反映;minimal プリセットはプロンプトが封鎖されているため対象外です。",
+		/* Third-language dictionaries, keyed by lowercase BCP-47 tag — the registry
+		   matches locale ids case-insensitively, so `zh-hk` also answers an active
+		   `zh-HK`. zh-MO shares the Hong Kong copy (港式) and zh-TW the Taiwanese
+		   one, as the two written standards differ. */
+		var LOCALES = {
+			/* locale: ar */
+			"ar": {
+				"title": "التحكم باللغة",
+				"cardDesc": "أوصاف الأدوات وتفكير النموذج والردود — ثلاث قنوات، كل واحدة تتبع لغة الواجهة أو لغة محددة",
+				"mode.auto": "اتّباع لغة الواجهة",
+				"mode.force": "فرض لغة محددة",
+				"mode.off": "إيقاف",
+				"quick.syncAll": "الكل حسب الواجهة",
+				"quick.offAll": "إيقاف الكل",
+				"chan.desc": "أوصاف الأدوات",
+				"chan.think": "تفكير النموذج",
+				"chan.output": "الردود",
+				"chosen": "اختيار صريح في الإعدادات",
+				"reported": "ما يبلّغ عنه المتصفح",
+				"undetected": "لم تُكتشف أي لغة (لا حقن)",
+				"none": "—",
+				"error": "فشل الكتابة",
+				"hint": "ثلاث قنوات مستقلة: اتّباع الواجهة / فرض لغة / إيقاف (تفكير النموذج والردود متوقفة افتراضيًا للحفاظ على السلوك الحالي). ترتيب الكشف: الاختيار الصريح في الإعدادات ← عام ← اللغة يتقدّم على ما يبلّغ عنه المتصفح. يسري التغيير في الطلب التالي؛ أما نمط minimal فنصّه التوجيهي مغلق وهو خارج النطاق.",
+			},
+			/* locale: de */
+			"de": {
+				"title": "Sprachsteuerung",
+				"cardDesc": "Tool-Beschreibungen, Denken des Modells und Antworten — drei Kanäle, jeder folgt der GUI-Sprache oder einer festen Sprache",
+				"mode.auto": "GUI-Sprache folgen",
+				"mode.force": "Sprache erzwingen",
+				"mode.off": "Aus",
+				"quick.syncAll": "Alle auf GUI-Sprache",
+				"quick.offAll": "Alle ausschalten",
+				"chan.desc": "Tool-Beschreibungen",
+				"chan.think": "Denken des Modells",
+				"chan.output": "Antworten",
+				"chosen": "Ausdrückliche Wahl in den Einstellungen",
+				"reported": "Browser-Meldung",
+				"undetected": "Keine Sprache erkannt (nichts injiziert)",
+				"none": "—",
+				"error": "Schreiben fehlgeschlagen",
+				"hint": "Drei unabhängige Kanäle: GUI-Sprache folgen / Sprache erzwingen / aus (Denken und Antworten sind standardmäßig aus, um das bisherige Verhalten zu erhalten). Erkennungsreihenfolge: die ausdrückliche Wahl unter Einstellungen → Allgemein → Sprache hat Vorrang vor der Browser-Meldung. Änderungen greifen ab der nächsten Anfrage; das Preset minimal versiegelt seinen Prompt und bleibt außen vor.",
+			},
+			/* locale: fr */
+			"fr": {
+				"title": "Contrôle de la langue",
+				"cardDesc": "Descriptions d'outils, réflexion du modèle et réponses — trois canaux, chacun suit la langue de l'interface ou une langue fixe",
+				"mode.auto": "Suivre la langue de l'interface",
+				"mode.force": "Forcer une langue",
+				"mode.off": "Désactivé",
+				"quick.syncAll": "Tout suivre l'interface",
+				"quick.offAll": "Tout désactiver",
+				"chan.desc": "Descriptions d'outils",
+				"chan.think": "Réflexion du modèle",
+				"chan.output": "Réponses",
+				"chosen": "Choix explicite dans les paramètres",
+				"reported": "Signalé par le navigateur",
+				"undetected": "Aucune langue détectée (aucune injection)",
+				"none": "—",
+				"error": "Échec de l'écriture",
+				"hint": "Trois canaux indépendants : suivre l'interface / forcer une langue / désactivé (réflexion et réponses désactivées par défaut pour ne rien changer). Ordre de détection : le choix explicite dans Paramètres → Général → Langue prime sur le signalement du navigateur. Le changement s'applique dès la requête suivante ; le preset minimal scelle son prompt et reste hors périmètre.",
+			},
+			/* locale: hi */
+			"hi": {
+				"title": "भाषा नियंत्रण",
+				"cardDesc": "टूल विवरण, मॉडल की सोच और उत्तर — तीन चैनल, हर एक इंटरफ़ेस भाषा या तय भाषा का पालन करता है",
+				"mode.auto": "इंटरफ़ेस भाषा का पालन",
+				"mode.force": "भाषा बाध्य करें",
+				"mode.off": "बंद",
+				"quick.syncAll": "सभी इंटरफ़ेस के अनुसार",
+				"quick.offAll": "सभी बंद करें",
+				"chan.desc": "टूल विवरण",
+				"chan.think": "मॉडल की सोच",
+				"chan.output": "उत्तर",
+				"chosen": "सेटिंग्स में स्पष्ट चयन",
+				"reported": "ब्राउज़र रिपोर्ट",
+				"undetected": "कोई भाषा नहीं मिली (कुछ भी इंजेक्ट नहीं)",
+				"none": "—",
+				"error": "लिखने में विफल",
+				"hint": "तीन स्वतंत्र चैनल: इंटरफ़ेस का पालन / भाषा बाध्य / बंद (सोच और उत्तर मौजूदा व्यवहार बनाए रखने के लिए डिफ़ॉल्ट रूप से बंद हैं)। पहचान का क्रम: सेटिंग्स → सामान्य → भाषा में स्पष्ट चयन ब्राउज़र रिपोर्ट से पहले। बदलाव अगले अनुरोध से लागू होता है; minimal प्रीसेट अपना प्रॉम्प्ट सील करता है और दायरे से बाहर है।",
+			},
+			/* locale: id */
+			"id": {
+				"title": "Kontrol Bahasa",
+				"cardDesc": "Deskripsi alat, penalaran model, dan balasan — tiga kanal, masing-masing mengikuti bahasa antarmuka atau bahasa tetap",
+				"mode.auto": "Ikuti bahasa antarmuka",
+				"mode.force": "Paksa bahasa",
+				"mode.off": "Nonaktif",
+				"quick.syncAll": "Semua ikuti antarmuka",
+				"quick.offAll": "Nonaktifkan semua",
+				"chan.desc": "Deskripsi alat",
+				"chan.think": "Penalaran model",
+				"chan.output": "Balasan",
+				"chosen": "Pilihan eksplisit di Pengaturan",
+				"reported": "Laporan peramban",
+				"undetected": "Bahasa tidak terdeteksi (tidak ada injeksi)",
+				"none": "—",
+				"error": "Gagal menulis",
+				"hint": "Tiga kanal independen: ikuti antarmuka / paksa bahasa / nonaktif (penalaran dan balasan nonaktif secara bawaan agar perilaku sekarang tetap). Urutan deteksi: pilihan eksplisit di Pengaturan → Umum → Bahasa mengalahkan laporan peramban. Perubahan berlaku pada permintaan berikutnya; preset minimal menyegel prompt-nya dan di luar cakupan.",
+			},
+			/* locale: it */
+			"it": {
+				"title": "Controllo lingua",
+				"cardDesc": "Descrizioni degli strumenti, ragionamento del modello e risposte — tre canali, ciascuno segue la lingua dell'interfaccia o una lingua fissa",
+				"mode.auto": "Segui la lingua dell'interfaccia",
+				"mode.force": "Forza una lingua",
+				"mode.off": "Disattivato",
+				"quick.syncAll": "Tutti sull'interfaccia",
+				"quick.offAll": "Disattiva tutto",
+				"chan.desc": "Descrizioni degli strumenti",
+				"chan.think": "Ragionamento del modello",
+				"chan.output": "Risposte",
+				"chosen": "Scelta esplicita nelle impostazioni",
+				"reported": "Segnalazione del browser",
+				"undetected": "Nessuna lingua rilevata (nessuna iniezione)",
+				"none": "—",
+				"error": "Scrittura non riuscita",
+				"hint": "Tre canali indipendenti: segui l'interfaccia / forza una lingua / disattivato (ragionamento e risposte disattivati per impostazione predefinita, per non cambiare il comportamento attuale). Ordine di rilevamento: la scelta esplicita in Impostazioni → Generali → Lingua prevale sulla segnalazione del browser. Le modifiche valgono dalla richiesta successiva; il preset minimal sigilla il proprio prompt e resta fuori ambito.",
+			},
+			/* locale: ja */
+			"ja": {
+				"title": "言語制御",
+				"cardDesc": "ツール説明・モデルの思考・回答をそれぞれGUI言語または指定言語で",
+				"mode.auto": "GUI言語に従う",
+				"mode.force": "言語を指定",
+				"mode.off": "オフ",
+				"quick.syncAll": "すべてGUI言語に",
+				"quick.offAll": "すべてオフ",
+				"chan.desc": "ツール説明",
+				"chan.think": "モデルの思考",
+				"chan.output": "回答出力",
+				"chosen": "設定での明示的な選択",
+				"reported": "ブラウザー報告",
+				"undetected": "言語未検出(注入なし)",
+				"none": "—",
+				"error": "書き込み失敗",
+				"hint": "3つのチャネルを独立に設定:GUI言語に従う / 指定 / オフ(思考と回答は現状維持のためデフォルトはオフ)。検出順序:設定 → 全般 → 言語の明示的な選択がブラウザー報告に優先。切り替えは次のリクエストから反映;minimal プリセットはプロンプトが封鎖されているため対象外です。",
+			},
+			/* locale: ko */
+			"ko": {
+				"title": "언어 제어",
+				"cardDesc": "도구 설명·모델 사고·응답을 각각 GUI 언어 또는 지정 언어로",
+				"mode.auto": "GUI 언어 따르기",
+				"mode.force": "언어 지정",
+				"mode.off": "끄기",
+				"quick.syncAll": "전체 GUI 언어로",
+				"quick.offAll": "전체 끄기",
+				"chan.desc": "도구 설명",
+				"chan.think": "모델 사고",
+				"chan.output": "응답 출력",
+				"chosen": "설정에서 명시적 선택",
+				"reported": "브라우저 보고",
+				"undetected": "언어 미감지(주입 없음)",
+				"none": "—",
+				"error": "쓰기 실패",
+				"hint": "세 채널을 독립 설정:GUI 언어 따르기 / 지정 / 끄기(사고와 응답은 현상 유지를 위해 기본 꺼짐). 감지 순서: 설정 → 일반 → 언어의 명시적 선택이 브라우저 보고에 우선. 전환은 다음 요청부터 적용;minimal 프리셋은 프롬프트가 폐쇄되어 있어 대상에서 제외됩니다.",
+			},
+			/* locale: nl */
+			"nl": {
+				"title": "Taalbeheer",
+				"cardDesc": "Toolbeschrijvingen, denkwijze van het model en antwoorden — drie kanalen, elk volgt de interfacetaal of een vaste taal",
+				"mode.auto": "Interfacetaal volgen",
+				"mode.force": "Taal forceren",
+				"mode.off": "Uit",
+				"quick.syncAll": "Alles interfacetaal",
+				"quick.offAll": "Alles uitzetten",
+				"chan.desc": "Toolbeschrijvingen",
+				"chan.think": "Denkwijze van het model",
+				"chan.output": "Antwoorden",
+				"chosen": "Expliciete keuze in instellingen",
+				"reported": "Browsermelding",
+				"undetected": "Geen taal gedetecteerd (niets geïnjecteerd)",
+				"none": "—",
+				"error": "Schrijven mislukt",
+				"hint": "Drie onafhankelijke kanalen: interfacetaal volgen / taal forceren / uit (denkwijze en antwoorden staan standaard uit om het huidige gedrag te bewaren). Detectievolgorde: de expliciete keuze bij Instellingen → Algemeen → Taal gaat vóór de browsermelding. Wijzigingen gelden vanaf het volgende verzoek; de preset minimal verzegelt zijn prompt en valt buiten bereik.",
+			},
+			/* locale: pl */
+			"pl": {
+				"title": "Sterowanie językiem",
+				"cardDesc": "Opisy narzędzi, rozumowanie modelu i odpowiedzi — trzy kanały, każdy podąża za językiem interfejsu lub ustalonym językiem",
+				"mode.auto": "Zgodnie z językiem interfejsu",
+				"mode.force": "Wymuś język",
+				"mode.off": "Wyłączone",
+				"quick.syncAll": "Wszystko jak interfejs",
+				"quick.offAll": "Wyłącz wszystko",
+				"chan.desc": "Opisy narzędzi",
+				"chan.think": "Rozumowanie modelu",
+				"chan.output": "Odpowiedzi",
+				"chosen": "Jawny wybór w ustawieniach",
+				"reported": "Zgłoszenie przeglądarki",
+				"undetected": "Nie wykryto języka (nic nie wstrzyknięto)",
+				"none": "—",
+				"error": "Zapis nie powiódł się",
+				"hint": "Trzy niezależne kanały: zgodnie z interfejsem / wymuszony język / wyłączone (rozumowanie i odpowiedzi są domyślnie wyłączone, aby zachować dotychczasowe działanie). Kolejność wykrywania: jawny wybór w Ustawienia → Ogólne → Język ma pierwszeństwo przed zgłoszeniem przeglądarki. Zmiany działają od następnego żądania; preset minimal zamyka swój prompt i pozostaje poza zakresem.",
+			},
+			/* locale: pt */
+			"pt": {
+				"title": "Controle de idioma",
+				"cardDesc": "Descrições de ferramentas, raciocínio do modelo e respostas — três canais, cada um segue o idioma da interface ou um idioma fixo",
+				"mode.auto": "Seguir o idioma da interface",
+				"mode.force": "Forçar um idioma",
+				"mode.off": "Desativado",
+				"quick.syncAll": "Tudo pela interface",
+				"quick.offAll": "Desativar tudo",
+				"chan.desc": "Descrições de ferramentas",
+				"chan.think": "Raciocínio do modelo",
+				"chan.output": "Respostas",
+				"chosen": "Escolha explícita nas configurações",
+				"reported": "Relatado pelo navegador",
+				"undetected": "Nenhum idioma detectado (nada injetado)",
+				"none": "—",
+				"error": "Falha ao gravar",
+				"hint": "Três canais independentes: seguir a interface / forçar um idioma / desativado (raciocínio e respostas desativados por padrão para preservar o comportamento atual). Ordem de detecção: a escolha explícita em Configurações → Geral → Idioma tem prioridade sobre o relato do navegador. As mudanças valem na próxima requisição; o preset minimal sela o próprio prompt e fica fora do escopo.",
+			},
+			/* locale: ru */
+			"ru": {
+				"title": "Управление языком",
+				"cardDesc": "Описания инструментов, рассуждения модели и ответы — три канала, каждый следует языку интерфейса или заданному языку",
+				"mode.auto": "Следовать языку интерфейса",
+				"mode.force": "Задать язык принудительно",
+				"mode.off": "Выключено",
+				"quick.syncAll": "Всё по интерфейсу",
+				"quick.offAll": "Выключить всё",
+				"chan.desc": "Описания инструментов",
+				"chan.think": "Рассуждения модели",
+				"chan.output": "Ответы",
+				"chosen": "Явный выбор в настройках",
+				"reported": "Сообщение браузера",
+				"undetected": "Язык не определён (ничего не внедряется)",
+				"none": "—",
+				"error": "Не удалось записать",
+				"hint": "Три независимых канала: следовать интерфейсу / задать язык принудительно / выключено (рассуждения и ответы по умолчанию выключены, чтобы сохранить текущее поведение). Порядок определения: явный выбор в разделе «Настройки → Общие → Язык» важнее сообщения браузера. Изменения вступают в силу со следующего запроса; пресет minimal изолирует свой промпт и не входит в область действия.",
+			},
+			/* locale: sv */
+			"sv": {
+				"title": "Språkstyrning",
+				"cardDesc": "Verktygsbeskrivningar, modellens resonemang och svar — tre kanaler, var och en följer gränssnittets språk eller ett fast språk",
+				"mode.auto": "Följ gränssnittets språk",
+				"mode.force": "Tvinga ett språk",
+				"mode.off": "Av",
+				"quick.syncAll": "Allt enligt gränssnittet",
+				"quick.offAll": "Stäng av allt",
+				"chan.desc": "Verktygsbeskrivningar",
+				"chan.think": "Modellens resonemang",
+				"chan.output": "Svar",
+				"chosen": "Uttryckligt val i inställningarna",
+				"reported": "Rapport från webbläsaren",
+				"undetected": "Inget språk hittades (inget injiceras)",
+				"none": "—",
+				"error": "Skrivning misslyckades",
+				"hint": "Tre oberoende kanaler: följ gränssnittet / tvinga ett språk / av (resonemang och svar är av som standard för att behålla nuvarande beteende). Identifieringsordning: det uttryckliga valet under Inställningar → Allmänt → Språk går före webbläsarens rapport. Ändringar gäller från nästa begäran; förinställningen minimal förseglar sin prompt och omfattas inte.",
+			},
+			/* locale: th */
+			"th": {
+				"title": "ควบคุมภาษา",
+				"cardDesc": "คำอธิบายเครื่องมือ การคิดของโมเดล และคำตอบ — สามช่องทาง แต่ละช่องตามภาษาอินเทอร์เฟซหรือภาษาที่กำหนด",
+				"mode.auto": "ตามภาษาอินเทอร์เฟซ",
+				"mode.force": "บังคับภาษา",
+				"mode.off": "ปิด",
+				"quick.syncAll": "ทั้งหมดตามอินเทอร์เฟซ",
+				"quick.offAll": "ปิดทั้งหมด",
+				"chan.desc": "คำอธิบายเครื่องมือ",
+				"chan.think": "การคิดของโมเดล",
+				"chan.output": "คำตอบ",
+				"chosen": "ตัวเลือกที่ระบุในการตั้งค่า",
+				"reported": "รายงานจากเบราว์เซอร์",
+				"undetected": "ไม่พบภาษา (ไม่แทรกข้อความ)",
+				"none": "—",
+				"error": "เขียนไม่สำเร็จ",
+				"hint": "สามช่องทางอิสระ: ตามอินเทอร์เฟซ / บังคับภาษา / ปิด (การคิดและคำตอบปิดโดยค่าเริ่มต้นเพื่อคงพฤติกรรมเดิม) ลำดับการตรวจหา: ตัวเลือกที่ระบุใน การตั้งค่า → ทั่วไป → ภาษา มาก่อนรายงานจากเบราว์เซอร์ การเปลี่ยนแปลงมีผลกับคำขอถัดไป; พรีเซ็ต minimal ปิดผนึกพรอมป์ของตนจึงไม่อยู่ในขอบเขต",
+			},
+			/* locale: tr */
+			"tr": {
+				"title": "Dil Denetimi",
+				"cardDesc": "Araç açıklamaları, modelin düşünmesi ve yanıtlar — üç kanal; her biri arayüz dilini ya da sabit bir dili izler",
+				"mode.auto": "Arayüz dilini izle",
+				"mode.force": "Dil zorla",
+				"mode.off": "Kapalı",
+				"quick.syncAll": "Tümü arayüz dili",
+				"quick.offAll": "Tümünü kapat",
+				"chan.desc": "Araç açıklamaları",
+				"chan.think": "Modelin düşünmesi",
+				"chan.output": "Yanıtlar",
+				"chosen": "Ayarlardaki açık seçim",
+				"reported": "Tarayıcı bildirimi",
+				"undetected": "Dil algılanmadı (hiçbir şey eklenmez)",
+				"none": "—",
+				"error": "Yazma başarısız",
+				"hint": "Üç bağımsız kanal: arayüzü izle / dil zorla / kapalı (düşünme ve yanıtlar mevcut davranışı korumak için varsayılan olarak kapalıdır). Algılama sırası: Ayarlar → Genel → Dil altındaki açık seçim, tarayıcı bildiriminden önce gelir. Değişiklikler bir sonraki istekte geçerli olur; minimal ön ayarı istemini mühürler ve kapsam dışıdır.",
+			},
+			/* locale: vi */
+			"vi": {
+				"title": "Điều khiển ngôn ngữ",
+				"cardDesc": "Mô tả công cụ, suy nghĩ của mô hình và câu trả lời — ba kênh, mỗi kênh theo ngôn ngữ giao diện hoặc một ngôn ngữ cố định",
+				"mode.auto": "Theo ngôn ngữ giao diện",
+				"mode.force": "Buộc một ngôn ngữ",
+				"mode.off": "Tắt",
+				"quick.syncAll": "Tất cả theo giao diện",
+				"quick.offAll": "Tắt tất cả",
+				"chan.desc": "Mô tả công cụ",
+				"chan.think": "Suy nghĩ của mô hình",
+				"chan.output": "Câu trả lời",
+				"chosen": "Lựa chọn rõ ràng trong cài đặt",
+				"reported": "Trình duyệt báo cáo",
+				"undetected": "Không phát hiện ngôn ngữ (không chèn gì)",
+				"none": "—",
+				"error": "Ghi thất bại",
+				"hint": "Ba kênh độc lập: theo giao diện / buộc ngôn ngữ / tắt (suy nghĩ và câu trả lời mặc định tắt để giữ nguyên hành vi hiện tại). Thứ tự phát hiện: lựa chọn rõ ràng trong Cài đặt → Chung → Ngôn ngữ được ưu tiên hơn báo cáo của trình duyệt. Thay đổi có hiệu lực từ yêu cầu kế tiếp; preset minimal niêm phong prompt của nó và nằm ngoài phạm vi.",
+			},
+			/* locale: zh-hk */
+			"zh-hk": {
+				"title": "語言控制",
+				"cardDesc": "工具描述、模型思考、回覆輸出——三個通道各自跟隨介面語言或者指定語言",
+				"mode.auto": "跟隨介面語言",
+				"mode.force": "強制指定語言",
+				"mode.off": "關閉",
+				"quick.syncAll": "全部跟隨介面",
+				"quick.offAll": "全部關閉",
+				"chan.desc": "工具描述",
+				"chan.think": "模型思考",
+				"chan.output": "回覆輸出",
+				"chosen": "設定中的明確選擇",
+				"reported": "瀏覽器上報",
+				"undetected": "未偵測到語言(不注入)",
+				"none": "—",
+				"error": "寫入失敗",
+				"hint": "三個通道獨立設定:跟隨介面 / 強制指定 / 關閉(思考與回覆預設關閉以維持現狀)。偵測優先次序:設定 → 一般 → 語言的明確選擇 > 瀏覽器上報。切換後下一輪請求即時生效;minimal 模式提示詞封閉,不在範圍之內。",
+			},
+			/* locale: zh-mo */
+			"zh-mo": {
+				"title": "語言控制",
+				"cardDesc": "工具描述、模型思考、回覆輸出——三個通道各自跟隨介面語言或者指定語言",
+				"mode.auto": "跟隨介面語言",
+				"mode.force": "強制指定語言",
+				"mode.off": "關閉",
+				"quick.syncAll": "全部跟隨介面",
+				"quick.offAll": "全部關閉",
+				"chan.desc": "工具描述",
+				"chan.think": "模型思考",
+				"chan.output": "回覆輸出",
+				"chosen": "設定中的明確選擇",
+				"reported": "瀏覽器上報",
+				"undetected": "未偵測到語言(不注入)",
+				"none": "—",
+				"error": "寫入失敗",
+				"hint": "三個通道獨立設定:跟隨介面 / 強制指定 / 關閉(思考與回覆預設關閉以維持現狀)。偵測優先次序:設定 → 一般 → 語言的明確選擇 > 瀏覽器上報。切換後下一輪請求即時生效;minimal 模式提示詞封閉,不在範圍之內。",
+			},
+			/* locale: zh-tw */
+			"zh-tw": {
+				"title": "語言控制",
+				"cardDesc": "工具描述、模型思考、回覆輸出——三個通道各自跟隨介面語言或指定語言",
+				"mode.auto": "跟隨介面語言",
+				"mode.force": "強制指定語言",
+				"mode.off": "關閉",
+				"quick.syncAll": "全部跟隨介面",
+				"quick.offAll": "全部關閉",
+				"chan.desc": "工具描述",
+				"chan.think": "模型思考",
+				"chan.output": "回覆輸出",
+				"chosen": "設定中的明確選擇",
+				"reported": "瀏覽器回報",
+				"undetected": "未偵測到語言(不會注入)",
+				"none": "—",
+				"error": "寫入失敗",
+				"hint": "三個通道獨立設定:跟隨介面 / 強制指定 / 關閉(思考與回覆預設關閉以維持現狀)。偵測優先順序:設定 → 一般 → 語言的明確選擇優先於瀏覽器回報。切換後下一輪請求即生效;minimal 模式的提示詞是封閉的,不在範圍內。",
+			},
 		};
 
-		var ko = {
-			"title": "언어 제어",
-			"cardDesc": "도구 설명·모델 사고·응답을 각각 GUI 언어 또는 지정 언어로",
-			"mode.auto": "GUI 언어 따르기",
-			"mode.force": "언어 지정",
-			"mode.off": "끄기",
-			"quick.syncAll": "전체 GUI 언어로",
-			"quick.offAll": "전체 끄기",
-			"chan.desc": "도구 설명",
-			"chan.think": "모델 사고",
-			"chan.output": "응답 출력",
-			"chosen": "설정에서 명시적 선택",
-			"reported": "브라우저 보고",
-			"undetected": "언어 미감지(주입 없음)",
-			"none": "—",
-			"error": "쓰기 실패",
-			"hint": "세 채널을 독립 설정:GUI 언어 따르기 / 지정 / 끄기(사고와 응답은 현상 유지를 위해 기본 꺼짐). 감지 순서: 설정 → 일반 → 언어의 명시적 선택이 브라우저 보고에 우선. 전환은 다음 요청부터 적용;minimal 프리셋은 프롬프트가 폐쇄되어 있어 대상에서 제외됩니다.",
+		/* Macro-tag aliases: the registry resolves a locale by exact id — its fallback
+		   chain only follows ids a language pack declared — so a pack that activates
+		   the macro tag `zh-Hant` is not folded onto `zh-hk` for us the way a
+		   hand-written lookup would. Spelling the macro tags out keeps the card
+		   translated under either spelling; a region id such as `zh-Hant-HK` or
+		   `zh-Hans-CN` reaches them through the pack's own fallback chain. These
+		   are references, not copies, so there is no second book to keep aligned. */
+		var LOCALE_ALIASES = {
+			"zh-hant": LOCALES["zh-hk"],
+			"zh-hans": zh,
 		};
 
-		/** Language id → self name, mirroring the host half's table. */
+		/** Language id → the language's own name, mirroring the host half's
+		    LANGUAGE_SELF_NAMES table: the two carry the SAME set (the smoke test
+		    compares them), so change one and change the other. Covers every shipped
+		    dictionary; anything else degrades to the bare tag. */
+		var SELF_NAMES = {
+			"en": "English",
+			"zh": "简体中文",
+			"zh-hk": "繁體中文(香港)",
+			"zh-mo": "繁體中文(澳門)",
+			"zh-tw": "繁體中文(台灣)",
+			"ja": "日本語",
+			"ko": "한국어",
+			"ar": "العربية",
+			"de": "Deutsch",
+			"fr": "Français",
+			"hi": "हिन्दी",
+			"id": "Bahasa Indonesia",
+			"it": "Italiano",
+			"nl": "Nederlands",
+			"pl": "Polski",
+			"pt": "Português",
+			"ru": "Русский",
+			"sv": "Svenska",
+			"th": "ไทย",
+			"tr": "Türkçe",
+			"vi": "Tiếng Việt",
+		};
+
 		function selfName(id) {
 			if (typeof id !== "string" || id.length === 0) return undefined;
 			var key = id.toLowerCase();
-			if (key === "en") return "English";
-			if (key === "zh") return "简体中文";
-			if (key === "ja") return "日本語";
-			if (key === "ko") return "한국어";
+			if (Object.prototype.hasOwnProperty.call(SELF_NAMES, key)) return SELF_NAMES[key];
 			return '"' + id + '"';
 		}
 
@@ -512,16 +896,17 @@ window.__ModuleLoader__.load({
 				try {
 					var disposeDict = ctx.locale.register(DICT_NS, { zh: zh, en: en });
 					if (typeof disposeDict === "function") disposers.push(disposeDict);
-					// Optional packs (ja/ko): inert until a matching external
-					// language definition is active in the GUI.
+					// Third languages and the macro-tag aliases: ONE registry visit carries
+					// every shipped dictionary, so a language added to the table cannot be
+					// forgotten here. Each stays inert until a language pack makes that tag
+					// active in the GUI; the card's `t` seat re-derives per locale revision,
+					// so a switch repaints it without a reload.
 					try {
-						var disposeJa = ctx.locale.register(DICT_NS, "ja", ja);
-						if (typeof disposeJa === "function") disposers.push(disposeJa);
-					} catch (error) { /* optional pack stays absent */ }
-					try {
-						var disposeKo = ctx.locale.register(DICT_NS, "ko", ko);
-						if (typeof disposeKo === "function") disposers.push(disposeKo);
-					} catch (error) { /* optional pack stays absent */ }
+						var disposePacks = ctx.locale.register(DICT_NS, Object.assign({}, LOCALE_ALIASES, LOCALES));
+						if (typeof disposePacks === "function") disposers.push(disposePacks);
+					} catch (error) {
+						console.warn(TAG + " language pack registration failed:", error && error.message ? error.message : error);
+					}
 				} catch (error) {
 					console.warn(TAG + " dictionary registration failed:", error && error.message ? error.message : error);
 				}

@@ -3,6 +3,19 @@
 > 倒序排列,新版本条目在最上面。条目格式:`## vX.Y.Z — YYYY-MM-DD` + 类型(feat / fix / docs / chore)+ 要点 + 相关链接。
 > 纪律见 AGENTS.md「变更记录纪律」:发版前先更新本文件并随版本提交;事故复盘、复现与真机验证记录也记在这里。
 
+## v0.5.0 — 2026-09-15
+
+**类型**:feat
+
+- **设置卡片支持 21 种界面语言**。除文件内的 `zh` / `en` 两本基础词典外,新增 **19 门第三语言**,一门一条放在 `LOCALES` 表,每条前一行带 `/* locale: <tag> */` 标记:`ar` `de` `fr` `hi` `id` `it` `ja` `ko` `nl` `pl` `pt` `ru` `sv` `th` `tr` `vi` `zh-HK` `zh-MO` `zh-TW`(繁体三门里 zh-MO 与 zh-HK 同文,zh-TW 用台湾用词)。加一门语言 = 表里追加一条带标记的条目,注册逻辑一行不改。
+- **词典经 `ctx.locale.register` 交给 DSH 的 locale 服务**(`agentLang` 命名空间,一次注册 `Object.assign({}, LOCALE_ALIASES, LOCALES)`,表里有什么就发布什么);卡片注册用 `locale: DICT_NS` 把 `t` 座位绑到本插件词典,该座位按 locale revision 重新派生。**语言跟随 DSH 的 `ctx.locale`,切换语言即时生效**——无需刷新页面、无需重启,词典也不会在 apply 时被捕获成一次性值。
+- `LOCALE_ALIASES` 把宏标签 `zh-Hant` / `zh-Hans` 指到同一批词典对象上(引用而非副本,没有第二本要对齐):注册表按**精确 id** 查表,不会替我们把 `zh-Hant-*` 折到港式,区域 id 靠语言包自己的 fallback 链走到别名。
+- 强制语言下拉的语言自称表(host/client 两半各一份)补齐到 21 条(含 `zh-HK` / `zh-MO` / `zh-TW`),未知 tag 仍降级为裸 BCP 47 标签。
+- **新增守护测试「每本词典的键集与中文完全相等」**(`every shipped dictionary carries the same key set as zh`):按 `/* locale: */` 标记切片,逐门与 `zh` 比对 key 集合——缺键只会在查表时静默回退英文,卡片就成半翻译状态,这条测试专门拦它。另加三条守护:19 个 tag 的完整清单、host/client 自称表集合一致、bundle 语法可解析(词典打错字会让卡片整块空白)。冒烟测试 33 项全绿(原 29 项 + 4 项)。
+- **译文为机器辅助翻译,欢迎在 issue / PR 里修正**——每门语言只占 `LOCALES` 表里一处,互不影响,改一门不会碰到别的语言。
+- 文档:AGENTS.md「词典纪律」按 21 门语言的现状重写(标记约定、key 对齐、宏标签别名、本插件不自己 `addLanguage` 的理由)。
+- Release:https://github.com/KannaKuron/dsh-agent-lang/releases/tag/v0.5.0
+
 ## v0.4.3 — 2026-09-15
 
 **类型**:docs(兼容性核对,**无行为改动**)

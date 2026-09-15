@@ -32,7 +32,7 @@
 | `src/client.js` | 浏览器半(手写 ModuleLoader bundle):上报界面语言(`settingsScope.set('uiLocale')`)+ 注册 `settings.plugin.item` 设置卡片 |
 | `cordis.patch.yml` | `dsh plugin add` 官方安装通道的挂载声明(insert 一行插件 row,主机面全局挂载) |
 | `dsh.plugin.json` | 插件注册表清单(id `dsh-external/dsh-agent-lang`) |
-| `tests/smoke.mjs` | 冒烟测试(纯文件/helper 级,零依赖):helper 逻辑、源码纪律(require 白名单、无 import/JSX、词典对齐)、清单一致性 |
+| `tests/smoke.mjs` | 冒烟测试(纯文件/helper 级,零依赖):helper 逻辑、源码纪律(require 白名单、无 import/JSX、词典对齐与 19 tag 清单、自称表两半一致)、清单一致性 |
 
 ## 核心不变量(改代码前必读)
 
@@ -41,8 +41,9 @@
 3. **语言来源优先级(纯函数 `pickDisplayLanguage`,测试覆盖)**:mode off → 无;force+合法 forceLocale → forceLocale;auto:locale ns 的 `preference` > agent-lang ns 的 `uiLocale`;非法 BCP 47 一律忽略。**绝不写 `locale` 命名空间**(那是用户的显式选择,写它会破坏「absence delegates to browser」语义);client 只写自己 ns 的 `uiLocale` 单字段(settings 写是逐字段深合并,mode/forceLocale 永远幸存)。
 4. **设置命名空间 schema 必须是可调用的 schemastery 对象**(`schema(merged)` 解析值;zod 会抛 `not a function` 且命名空间永不服务 → 卡片永不出现,2026-08 dsh-better-workspace 实测根因)。因此 host 半用**动态** `import('@deepseek-ai/schemastery')`(保持冒烟测试零依赖可 import 本文件),运行时经 profile 共享 fallback 解析(实测可行);`@deepseek-ai/dsh-settings` 的 `settingsNamespace()` 做 era 探测(新 dsh 已移除该 helper,register 直接收字符串;旧 dsh 收 branded 形态,单次调用双兼容)。schemastery 只进 peerDependencies,不进 dependencies。
 5. **无构建**。host 半纯 ESM JS;client 半是**手写 ModuleLoader bundle**(`window.__ModuleLoader__.load({id, factory})`,id=包名):`require` 只允许基线白名单(react、react/jsx-runtime、react-dom、react-dom/client、@deepseek-ai/cordis、@deepseek-ai/dsh-client-store、@deepseek-ai/dsh-client-ui-slots、@deepseek-ai/dsh-client-ui-primitives),冒烟测试强制;无 import/JSX/TS 语法。
-6. **slot 契约**:`settings.plugin.item` 是 keyed 槽,**key = 设置命名空间**(`agent-lang`);tab 派发「宿主已服务命名空间 ∩ 已注册卡片」——宿主半不注册命名空间,卡片永远不出现。卡片 chrome 必须手写(`dl-` 前缀 CSS 镜像官方 PluginCard.module.css 的 token),不能 import ui-settings-plugins(不在白名单)。命名空间不可用(`snap.status !== 'ready'`)时卡片渲染 null(官方行为)。
-7. **词典纪律**:NS = agentLang;zh/en 词典 key 完全对齐且覆盖每个静态 t(...) 调用,冒烟测试逐 key 校验。语言自称映射(zh→简体中文)host/client 各一份,改要同步。
+6. **slot 契约**:`settings.plugin.item` 是 keyed 槽,**key = 设置命名空间**(`agent-lang`);tab 派发「宿主已服务命名空间 ∩ 已注册卡片」——宿主半不注册命名空间,卡片永远不出现。卡片 chrome 必须手写(`dl-` 前缀 CSS 镜像官方 PluginCard.module.css 的 token),不能 import ui-settings-plugins(不在白名单)。注册里的 `locale: DICT_NS` 让框架把 `t` 座位绑到本插件的词典命名空间,该座位**按 locale revision 重新派生**(渲染机制给每个 outlet 订阅 locale 变化:语言切换即重渲染并换新的 `t` 引用),所以卡片文案跟随 GUI 语言实时切换,插件自己不必订阅刷新、也不得在 apply 里把词典捕获成一次性值。命名空间不可用(`snap.status !== 'ready'`)时卡片渲染 null(官方行为)。
+7. **词典纪律(21 门语言)**:NS = agentLang;`zh` / `en` 是文件内的两本基础词典,其余 **19 门第三语言**在 `LOCALES` 表里一门一条(每条前一行 `/* locale: <tag> */` 标记;繁体三门 `zh-hk` / `zh-mo` / `zh-tw`,其中 zh-mo 与 zh-hk 同文)。注册表按**精确 id** 查表,不会替我们把 `zh-Hant-*` 折到港式,因此 `LOCALE_ALIASES` 把宏标签 `zh-hant` / `zh-hans` 指到同一批词典对象上(引用而非副本,没有第二本要对齐);区域 id 靠语言包自己的 fallback 链走到别名。**每本词典的 key 必须与 `zh` 完全相等**——缺键只会静默回退英文,卡片就成半翻译状态——冒烟测试 `every shipped dictionary carries the same key set as zh` 按标记切片逐门比对,另一条锁定 19 个 tag 的完整清单。加一门语言 = 在 `LOCALES` 追加一个带标记的条目再跑测试,不改任何逻辑:注册是一次 `ctx.locale.register(DICT_NS, Object.assign({}, LOCALE_ALIASES, LOCALES))`,表里有什么就发布什么,不可能漏注册。语言自称映射(共 21 条,含 en)host/client 各一份,冒烟测试比对两边集合,改要同步。
+   词典只在语言包(`ctx.locale.addLanguage`,如 dsh-i18n)把该 tag 注册进 catalog 后才可能成为 active——**本插件不自己 addLanguage**:那会把半翻译语言塞进 设置 → 通用 → 语言 的选择器。
 8. **React 纪律**:纯 React.createElement;组件定义在模块层(内联定义会在父渲染时重挂载);所有 hooks 先于任何 early return;primitives 图标经特征探测降级(`icon()` 失败回退文本 ▾)。
 9. **context order 125** 是自由槽位,排在官方 CONTEXT_ORDERS(SANDBOX_POLICY 110 / APPROVAL_POLICY 115 / SUBAGENT_DELEGATION 120)之后;若官方表扩张越过 125,换一个空闲数。
 10. **slot 注册 options 的顶层字段不会传给组件**(2026-08-31 实测:首版把 scope/localeScope 放顶层,组件 props.scope 为 undefined,useSyncExternalStore(undefined.subscribe) 渲染即崩,卡片无声消失而上报链路照常)。只有协议字段生效:`locale` 绑 t、`store` 绑 store seat、**`inject` 工厂返回的成员按原名成为 props**(hooks 子对象绑成 useXxx)。传对象一律走 inject 工厂;组件外再包 QuietBoundary(渲染失败只废本卡)。对照范本:已安装的 dsh-better-workspace 0.6.0(sandbox 里的开发副本可能滞后,以 profile node_modules 里实际装的版本为准)。
@@ -51,7 +52,7 @@
 
 ## 验证清单(改动后)
 
-1. `npm test` 全绿(29 项)。
+1. `npm test` 全绿(33 项:29 项原有 + 词典/tag/自称表/语法 4 项)。
 2. 真机(web profile 重启 DSH):
    - 页面加载后 `~/.dsh/settings.yaml` 出现 `agent-lang:` 段(`uiLocale` 为当前界面语言);
    - 任意非 minimal 模式新会话:工具调用卡片描述为界面语言(中文界面→中文描述);

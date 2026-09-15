@@ -106,11 +106,35 @@ const BCP47 = /^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$/u
 /** Accepted `mode` values. */
 const MODE_PATTERN = /^(auto|off|force)$/
 
-/** Language id → the language's own name, as the model should see it. */
+/**
+ * Language id → the language's own name, as the model should see it.
+ * Mirrors the client half's SELF_NAMES table — the two must carry the SAME
+ * set (tests/smoke.mjs compares them), so change one and change the other.
+ * 'en' rides in the table only to keep the two sets equal: languageSelfName()
+ * answers English before it reaches the table.
+ */
 const LANGUAGE_SELF_NAMES = {
-  zh: '简体中文',
-  ja: '日本語',
-  ko: '한국어',
+  'en': 'English',
+  'zh': '简体中文',
+  'zh-hk': '繁體中文(香港)',
+  'zh-mo': '繁體中文(澳門)',
+  'zh-tw': '繁體中文(台灣)',
+  'ja': '日本語',
+  'ko': '한국어',
+  'ar': 'العربية',
+  'de': 'Deutsch',
+  'fr': 'Français',
+  'hi': 'हिन्दी',
+  'id': 'Bahasa Indonesia',
+  'it': 'Italiano',
+  'nl': 'Nederlands',
+  'pl': 'Polski',
+  'pt': 'Português',
+  'ru': 'Русский',
+  'sv': 'Svenska',
+  'th': 'ไทย',
+  'tr': 'Türkçe',
+  'vi': 'Tiếng Việt',
 }
 
 const TAG = '[agent-lang]'
@@ -143,9 +167,10 @@ export function pickDisplayLanguage({ mode = 'auto', forceLocale, preference, re
 }
 
 /**
- * The language's own name for the directive prose. Built-ins get their
- * self-name; unknown ids (external language packs) degrade to naming the
- * BCP-47 tag, which models map to the right language reliably.
+ * The language's own name for the directive prose. Every language this
+ * plugin ships a dictionary for has its self-name here; unknown ids (external
+ * language packs) degrade to naming the BCP-47 tag, which models map to the
+ * right language reliably.
  * @param {string} id - a language id.
  * @returns {string} the display name to embed in the directive.
  */

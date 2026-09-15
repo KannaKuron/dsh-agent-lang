@@ -25,6 +25,40 @@ const {
 const hostSource = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8')
 const clientSource = readFileSync(new URL('../src/client.js', import.meta.url), 'utf8')
 
+// ── source-slicing helpers (dictionary discipline) ───────────────────────────
+
+/** The object literal body of `declaration`, brace-matched: a value holding a
+ *  brace (or a line that merely looks like a key) cannot truncate the slice. */
+function objectAt(source, declaration) {
+  const start = source.indexOf(declaration)
+  assert.ok(start >= 0, declaration + ' not found')
+  let depth = 0
+  const from = source.indexOf('{', start)
+  let i = from
+  for (; i < source.length; i++) {
+    const ch = source[i]
+    if (ch === '{') depth++
+    else if (ch === '}') {
+      depth--
+      if (depth === 0) break
+    }
+  }
+  return source.slice(from, i + 1)
+}
+
+/** One dictionary's key set, read off the source lines (the bundle is
+ *  hand-written, so every key sits on a line of its own). */
+function dictionaryKeys(segment) {
+  return [...segment.matchAll(/^[\t ]+"([^"]+)": "/gm)].map((match) => match[1]).sort()
+}
+
+/** A `{ key: value }` table's key set (single- or double-quoted keys). */
+function tableKeys(source, declaration) {
+  return [...objectAt(source, declaration).matchAll(/^[\t ]*['"]([A-Za-z][A-Za-z0-9-]*)['"]:\s*['"]/gm)]
+    .map((match) => match[1])
+    .sort()
+}
+
 // ── plugin shape ─────────────────────────────────────────────────────────────
 
 test('plugin shape: name, no hard injects, namespace constants', () => {
@@ -68,6 +102,19 @@ test('languageSelfName: built-ins and unknown packs', () => {
   assert.equal(languageSelfName('en'), 'English')
   assert.equal(languageSelfName('ja'), '日本語')
   assert.equal(languageSelfName('ko'), '한국어')
+  assert.equal(languageSelfName('x-custom'), 'the language with BCP-47 tag "x-custom"')
+})
+
+test('languageSelfName: every shipped language answers with its own name', () => {
+  // The table covers every dictionary the browser half ships, so a forced
+  // channel names the language instead of degrading to the bare tag.
+  assert.equal(languageSelfName('de'), 'Deutsch')
+  assert.equal(languageSelfName('zh-HK'), '繁體中文(香港)')
+  assert.equal(languageSelfName('zh-MO'), '繁體中文(澳門)')
+  assert.equal(languageSelfName('zh-TW'), '繁體中文(台灣)')
+  assert.equal(languageSelfName('tr'), 'Türkçe')
+  assert.equal(languageSelfName('vi'), 'Tiếng Việt')
+  // unknown ids (an external pack we ship no name for) still degrade to the tag
   assert.equal(languageSelfName('x-custom'), 'the language with BCP-47 tag "x-custom"')
 })
 
@@ -214,12 +261,15 @@ test('client bundle: reports ONLY uiLocale into the agent-lang namespace', () =>
   }
 })
 
-test('client bundle: settings card keyed by the namespace with zh/en dictionaries', () => {
+test('client bundle: settings card keyed by the namespace, dictionaries published to the registry', () => {
   assert.match(clientSource, /settings\.plugin\.item/)
   assert.match(clientSource, /key: NS/)
+  // The zh/en pair rides one call; every third language plus the macro-tag
+  // aliases ride a second one, so a language added to the table cannot be left
+  // unregistered — an unregistered dictionary is silently inert no matter how
+  // complete its copy is.
   assert.match(clientSource, /ctx\.locale\.register\(DICT_NS, \{ zh: zh, en: en \}\)/)
-  assert.match(clientSource, /ctx\.locale\.register\(DICT_NS, "ja", ja\)/)
-  assert.match(clientSource, /ctx\.locale\.register\(DICT_NS, "ko", ko\)/)
+  assert.match(clientSource, /ctx\.locale\.register\(DICT_NS, Object\.assign\(\{\}, LOCALE_ALIASES, LOCALES\)\)/)
 })
 
 test('client bundle: force-language options merge registered locale packs over the static fallback', () => {
@@ -243,29 +293,53 @@ test('client bundle: three channels with one-click sync/off shortcuts', () => {
   assert.match(clientSource, /write\(\{ mode: "off", thinkMode: "off", outMode: "off" \}\)/)
 })
 
-test('client bundle: zh/en/ja/ko dictionary keys stay aligned', () => {
-  function keys(objectLiteralName) {
-    const start = clientSource.indexOf('var ' + objectLiteralName + ' = {')
-    assert.ok(start >= 0, objectLiteralName + ' not found')
-    let depth = 0
-    let i = clientSource.indexOf('{', start)
-    const from = i
-    for (; i < clientSource.length; i++) {
-      const ch = clientSource[i]
-      if (ch === '{') depth++
-      else if (ch === '}') {
-        depth--
-        if (depth === 0) break
-      }
-    }
-    const body = clientSource.slice(from, i)
-    return new Set([...body.matchAll(/"([a-zA-Z][a-zA-Z0-9.]*)":/g)].map((m) => m[1]))
+test('every shipped dictionary carries the same key set as zh', () => {
+  // A third-language block is preceded by a /* locale: <tag> */ marker, so the
+  // blocks can be sliced without parsing the file. Equality matters because a
+  // key missing from a third language falls back to English at lookup time — a
+  // silent half-translated card, which is exactly what this catches.
+  const zhKeys = dictionaryKeys(clientSource.slice(
+    clientSource.indexOf('var zh = {'),
+    clientSource.indexOf('var en = {'),
+  ))
+  assert.ok(zhKeys.length >= 16, 'the zh dictionary looks truncated: ' + zhKeys.length)
+
+  const parts = objectAt(clientSource, 'var LOCALES = ').split('/* locale: ')
+  assert.ok(parts.length - 1 >= 19, 'expected at least nineteen third-language dictionaries, saw ' + (parts.length - 1))
+  for (let index = 1; index < parts.length; index += 1) {
+    const tag = parts[index].slice(0, parts[index].indexOf(' */'))
+    assert.deepEqual(dictionaryKeys(parts[index]), zhKeys, 'dictionary ' + tag + ' does not match the zh key set')
   }
-  const zhKeys = keys('zh')
-  assert.ok(zhKeys.size > 0)
-  for (const other of ['en', 'ja', 'ko']) {
-    assert.deepEqual([...keys(other)].sort(), [...zhKeys].sort(), other + ' dictionary keys drift from zh')
+})
+
+test('client bundle: the third-language table ships the full tag list', () => {
+  const tags = [...objectAt(clientSource, 'var LOCALES = ').matchAll(/\/\* locale: ([A-Za-z-]+) \*\//g)]
+    .map((match) => match[1])
+    .sort()
+  assert.deepEqual(tags, [
+    'ar', 'de', 'fr', 'hi', 'id', 'it', 'ja', 'ko', 'nl', 'pl', 'pt', 'ru', 'sv', 'th', 'tr', 'vi',
+    'zh-hk', 'zh-mo', 'zh-tw',
+  ])
+})
+
+test('client bundle: every shipped language has a self name, and the halves agree', () => {
+  // The card names a forced language with its own name; the host half embeds
+  // the same name in the injected directive, so the two tables must not drift.
+  const names = tableKeys(clientSource, 'var SELF_NAMES = ')
+  const hostNames = tableKeys(hostSource, 'const LANGUAGE_SELF_NAMES = ')
+  assert.ok(hostNames.length >= 21, 'the self-name table looks truncated: ' + hostNames.length)
+  assert.deepEqual(names, hostNames, 'the host and client self-name tables drifted apart')
+  const tags = [...objectAt(clientSource, 'var LOCALES = ').matchAll(/\/\* locale: ([A-Za-z-]+) \*\//g)]
+    .map((match) => match[1])
+  for (const tag of ['zh', 'en'].concat(tags)) {
+    assert.ok(names.includes(tag), 'no self name for shipped language ' + tag)
   }
+})
+
+test('client bundle: the bundle parses (a dictionary typo would blank the card)', () => {
+  // The card is registered as a factory; a syntax error anywhere in the bundle
+  // takes the whole client half down. Parsing it here costs nothing.
+  assert.doesNotThrow(() => { new Function(clientSource) })
 })
 
 test('client bundle: card receives scopes ONLY through the inject factory', () => {
