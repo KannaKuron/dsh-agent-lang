@@ -3,6 +3,12 @@
 > 倒序排列,新版本条目在最上面。条目格式:`## vX.Y.Z — YYYY-MM-DD` + 类型(feat / fix / docs / chore)+ 要点 + 相关链接。
 > 纪律见 AGENTS.md「变更记录纪律」:发版前先更新本文件并随版本提交;事故复盘、复现与真机验证记录也记在这里。
 
+## v0.5.2 — 2026-09-17
+
+**类型**:docs(npm description 双语化)
+
+- **package.json 的 description 改为「中文 · English」双语**:dsh 0.1.6-alpha.2 的新 Plugins 页对第三方插件直接显示 npm description 单字符串(官方 bundle 的中文来自页面内硬编码表,无第三方按语言切换通道);按生态惯例(ide-git / rewind-plugin 同款)双语拼接,中文界面一眼可读,英文保留 npm 搜索价值。无代码改动。
+
 ## v0.5.1 — 2026-09-17
 
 **类型**:feat(dsh 0.1.6-alpha.2 设置页体系迁移适配)

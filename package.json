@@ -1,7 +1,7 @@
 {
   "name": "dsh-agent-lang",
-  "version": "0.5.1",
-  "description": "DSH plugin: make every tool-call `description` (including run_code's, in any preset — standard, PTC, cordis, user presets, ptc-cordis, gitbash variants) follow the web GUI's display language instead of defaulting to English. Auto-detects the GUI language (explicit Settings→General choice first, browser-reported active locale second) and injects one global dynamic runtime-context directive; no preset or tool schema is modified. Ships a Settings → Plugins card for mode/language control.",
+  "version": "0.5.2",
+  "description": "工具调用描述 / 模型思考 / 回复输出三个语言通道:跟随界面语言、强制指定或关闭,一条运行时指示实现,不改动预设与工具 schema。· Language control for tool-call descriptions, model thinking, and replies: follow the GUI language, force a fixed tag, or off — via one runtime-context directive, no preset or tool schema touched.",
   "type": "module",
   "repository": {
     "type": "git",
