@@ -3,6 +3,16 @@
 > 倒序排列,新版本条目在最上面。条目格式:`## vX.Y.Z — YYYY-MM-DD` + 类型(feat / fix / docs / chore)+ 要点 + 相关链接。
 > 纪律见 AGENTS.md「变更记录纪律」:发版前先更新本文件并随版本提交;事故复盘、复现与真机验证记录也记在这里。
 
+## v0.5.1 — 2026-09-17
+
+**类型**:feat(dsh 0.1.6-alpha.2 设置页体系迁移适配)
+
+- **设置卡双座位**:dsh 0.1.6-alpha.2 把插件配置从「设置 → 插件」分区(`settings.plugin.item` 槽,已从官方槽目录移除)迁到侧边栏新 **Plugins 面板**的 `plugins.bundle.config` 槽(keyed by **包名**)。本插件现在同时注册两个座位——旧 `settings.plugin.item`(key=`agent-lang` 命名空间,≤ 0.1.6-alpha.1 宿主照常出卡)与新 `plugins.bundle.config`(key=`dsh-agent-lang` 包名,≥ 0.1.6-alpha.2 宿主在插件详情页出配置区)。两个 `slots.inject` 各等各的槽声明,任何宿主版本下恰好只有一个生效,无需版本探测(按槽可用性自动,不依赖版本号比较)。
+- **组件双视图**:`DescLangCard` 按 owner 传入的 `view` 分支——新槽固定 `view: "page"`(页面自画标题/图标/面包屑)时渲染纯表单体(`dl-page`/`dl-pageBody`,无折叠壳);旧槽不传 view,保持原折叠卡形态。
+- 实现细节:inject 工厂提升为共享的 `injected` 变量(两座位同一份 props:scope/localeScope/selectableLocales);CSS 追加 `dl-page`/`dl-pageBody` 两条规则。与 v0.5.0 的 21 门词典体系无交集(注册共用同一 `DICT_NS`,`locale: DICT_NS` 让两座位都吃到词典座位)。
+- 事实来源:dsh 源码 `packages/client/ui-plugin-manager/src/client/slot-contract.ts`(三槽契约,`plugins.item` 被官方内置卡占用、bundle 配置归 `plugins.bundle.config`/`plugins.row.config`);`packages/client/ui-settings-plugins`(官方内置卡已迁移);`extensions/cordis-client-runner/src/client/slot-catalog.ts`(旧槽已从目录消失)。
+- 冒烟测试新增「dual settings seat across dsh generations」(双注册存在、key=包名、view 分支);更新 inject 工厂断言(工厂提升为变量后的形状)。
+
 ## v0.5.0 — 2026-09-15
 
 **类型**:feat

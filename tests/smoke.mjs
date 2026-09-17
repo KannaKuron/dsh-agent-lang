@@ -272,6 +272,18 @@ test('client bundle: settings card keyed by the namespace, dictionaries publishe
   assert.match(clientSource, /ctx\.locale\.register\(DICT_NS, Object\.assign\(\{\}, LOCALE_ALIASES, LOCALES\)\)/)
 })
 
+test('client bundle: dual settings seat across dsh generations (0.1.6-alpha.2+)', () => {
+  // Legacy seat stays (older hosts) and the Plugins-page seat is keyed by
+  // the PACKAGE name — the page's configLedger matches on pkg.name, not on
+  // the settings namespace.
+  assert.match(clientSource, /slots\.inject\("settings\.plugin\.item"/)
+  assert.match(clientSource, /slots\.inject\("plugins\.bundle\.config"/)
+  assert.match(clientSource, /key: "dsh-agent-lang"/)
+  // Both seats render the same component; the page seat passes view="page"
+  // and the component drops its collapsible shell there.
+  assert.match(clientSource, /props\.view === "page"/)
+})
+
 test('client bundle: force-language options merge registered locale packs over the static fallback', () => {
   assert.match(clientSource, /selectableLocales: function \(\) \{/)
   assert.match(clientSource, /ctx\.locale\.getSnapshot\(\)\.locales \|\| \[\]/)
@@ -346,12 +358,16 @@ test('client bundle: card receives scopes ONLY through the inject factory', () =
   assert.match(clientSource, /function DescLangCard\(props\) \{/)
   // verified against dsh-better-workspace 0.6.0: top-level options fields do
   // NOT reach the component — the scopes must ride the inject factory.
-  assert.match(clientSource, /inject: function \(\) \{\s*\n\s*return \{/)
+  // (v0.4.4: the factory is hoisted into `injected` so BOTH seats — the
+  // legacy settings.plugin.item card and the plugins.bundle.config page —
+  // share one definition.)
+  assert.match(clientSource, /var injected = function \(\) \{[\s\S]*?\n\s*return \{/)
   const optionsBlock = clientSource.slice(
     clientSource.indexOf('key: NS'),
-    clientSource.indexOf('inject: function ()'),
+    clientSource.indexOf('var injected'),
   )
   assert.ok(!/(^|\n)\s*(scope|localeScope|store):/.test(optionsBlock), 'scopes leaked into top-level registration options')
+  assert.match(clientSource, /inject: injected/)
   // no external-store hook adapter CALLS: snapshots are read per render, writes bump a tick
   // (the word may appear in explanatory comments)
   assert.doesNotMatch(clientSource, /useSyncExternalStore\s*\(/)

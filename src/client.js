@@ -600,6 +600,8 @@ window.__ModuleLoader__.load({
 			".dl-chevron{flex:none;color:var(--dsw-alias-label-tertiary);transition:transform .16s}",
 			".dl-chevron.dl-chevronOpen{transform:rotate(180deg)}",
 			".dl-body{display:flex;flex-direction:column;gap:12px;padding:4px 16px 16px;max-width:640px}",
+			".dl-page{max-width:640px}",
+			".dl-pageBody{display:flex;flex-direction:column;gap:12px;padding:0 0 8px}",
 			".dl-row{display:flex;align-items:baseline;gap:8px;font-size:13px;line-height:1.5;color:var(--dsw-alias-label-secondary)}",
 			".dl-rowLabel{flex:none;color:var(--dsw-alias-label-tertiary)}",
 			".dl-rowValue{min-width:0;overflow-wrap:anywhere;color:var(--dsw-alias-label-primary)}",
@@ -817,22 +819,13 @@ window.__ModuleLoader__.load({
 				);
 			}
 
-			return E("li", { className: "dl-card" + (open ? " dl-open" : "") },
-				E("button", {
-					type: "button",
-					className: "dl-header",
-					"aria-expanded": open,
-					onClick: function () { setOpen(!open); },
-				},
-					E("span", { className: "dl-headText" },
-						E("span", { className: "dl-name" }, t("title")),
-						E("span", { className: "dl-desc" }, t("cardDesc")),
-					),
-					Chevron
-						? E(Chevron, { className: "dl-chevron" + (open ? " dl-chevronOpen" : "") })
-						: E("span", { className: "dl-chevron" + (open ? " dl-chevronOpen" : "") }, "▾"),
-				),
-				open ? E("div", { className: "dl-body" },
+			// dsh 0.1.6-alpha.2: the Plugins page renders this card through the
+			// `plugins.bundle.config` slot (keyed by the package name) with
+			// view="page" — the page draws the title itself, so the collapsible
+			// shell is only for the legacy Settings slot, which passes no view.
+			var pageView = props.view === "page";
+
+			var bodyContent = E("div", { className: pageView ? "dl-pageBody" : "dl-body" },
 					E("div", { className: "dl-seg" },
 						E("button", {
 							type: "button",
@@ -856,7 +849,26 @@ window.__ModuleLoader__.load({
 					channels.map(channelBlock),
 					error ? E("p", { className: "dl-error" }, error) : null,
 					E("p", { className: "dl-hint" }, t("hint")),
-				) : null,
+				);
+
+			if (pageView) return E("div", { className: "dl-page" }, bodyContent);
+
+			return E("li", { className: "dl-card" + (open ? " dl-open" : "") },
+				E("button", {
+					type: "button",
+					className: "dl-header",
+					"aria-expanded": open,
+					onClick: function () { setOpen(!open); },
+				},
+					E("span", { className: "dl-headText" },
+						E("span", { className: "dl-name" }, t("title")),
+						E("span", { className: "dl-desc" }, t("cardDesc")),
+					),
+					Chevron
+						? E(Chevron, { className: "dl-chevron" + (open ? " dl-chevronOpen" : "") })
+						: E("span", { className: "dl-chevron" + (open ? " dl-chevronOpen" : "") }, "▾"),
+				),
+				open ? bodyContent : null,
 			);
 		}
 
@@ -938,29 +950,45 @@ window.__ModuleLoader__.load({
 					console.warn(TAG + " slots service unavailable; settings card skipped");
 					return;
 				}
+				var injected = function () {
+					// The inject factory's returned members become the
+					// component's props: the two bound settings scopes ride
+					// here as PLAIN members (top-level options fields do NOT
+					// reach the component).
+					return {
+						scope: scope,
+						localeScope: localeScope,
+						selectableLocales: function () {
+							try {
+									return ctx.locale.getSnapshot().locales || [];
+							} catch (error) {
+									return [];
+							}
+						},
+					};
+				};
+				// Legacy seat (dsh <= 0.1.6-alpha.1): Settings → Plugins card,
+				// keyed by the settings namespace.
 				slots.inject("settings.plugin.item", function () {
 					return slots.register({
 						name: "settings.plugin.item",
 						key: NS,
 						locale: DICT_NS,
-						// The inject factory's returned members become the
-						// component's props: the two bound settings scopes ride
-						// here as PLAIN members (top-level options fields do NOT
-						// reach the component).
-						inject: function () {
-							return {
-								scope: scope,
-								localeScope: localeScope,
-								selectableLocales: function () {
-									try {
-										return ctx.locale.getSnapshot().locales || [];
-									} catch (error) {
-										return [];
-									}
-								},
-							};
-						},
+						inject: injected,
 					}, function CardWithBoundary(props) {
+						return E(QuietBoundary, null, E(DescLangCard, props));
+					});
+				});
+				// dsh 0.1.6-alpha.2+: the Plugins page's bundle configuration
+				// seat, keyed by the PACKAGE name. Both injects wait for their
+				// own declaration, so exactly one is live on any host version.
+				slots.inject("plugins.bundle.config", function () {
+					return slots.register({
+						name: "plugins.bundle.config",
+						key: "dsh-agent-lang",
+						locale: DICT_NS,
+						inject: injected,
+					}, function BundleConfigWithBoundary(props) {
 						return E(QuietBoundary, null, E(DescLangCard, props));
 					});
 				});
