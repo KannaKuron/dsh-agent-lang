@@ -600,7 +600,8 @@ window.__ModuleLoader__.load({
 			".dl-chevron{flex:none;color:var(--dsw-alias-label-tertiary);transition:transform .16s}",
 			".dl-chevron.dl-chevronOpen{transform:rotate(180deg)}",
 			".dl-body{display:flex;flex-direction:column;gap:12px;padding:4px 16px 16px;max-width:640px}",
-			".dl-page{max-width:640px}",
+			".dl-pageCard{max-width:640px}",
+			".dl-headerFlat{cursor:default}",
 			".dl-pageBody{display:flex;flex-direction:column;gap:12px;padding:0 0 8px}",
 			".dl-row{display:flex;align-items:baseline;gap:8px;font-size:13px;line-height:1.5;color:var(--dsw-alias-label-secondary)}",
 			".dl-rowLabel{flex:none;color:var(--dsw-alias-label-tertiary)}",
@@ -825,7 +826,7 @@ window.__ModuleLoader__.load({
 			// shell is only for the legacy Settings slot, which passes no view.
 			var pageView = props.view === "page";
 
-			var bodyContent = E("div", { className: pageView ? "dl-pageBody" : "dl-body" },
+			var bodyContent = E("div", { className: "dl-body" },
 					E("div", { className: "dl-seg" },
 						E("button", {
 							type: "button",
@@ -851,7 +852,15 @@ window.__ModuleLoader__.load({
 					E("p", { className: "dl-hint" }, t("hint")),
 				);
 
-			if (pageView) return E("div", { className: "dl-page" }, bodyContent);
+			if (pageView) return E("div", { className: "dl-card dl-pageCard" },
+				E("div", { className: "dl-header dl-headerFlat" },
+					E("span", { className: "dl-headText" },
+						E("span", { className: "dl-name" }, t("title")),
+						E("span", { className: "dl-desc" }, t("cardDesc")),
+					),
+				),
+				bodyContent,
+			);
 
 			return E("li", { className: "dl-card" + (open ? " dl-open" : "") },
 				E("button", {
