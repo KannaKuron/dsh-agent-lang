@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Language Control",
+    "description": "One runtime directive that writes tool-call descriptions, model thinking, and replies in the GUI language (or a forced tag) - each channel independently auto / force / off; no preset or tool schema is touched."
+  }
+}

@@ -208,12 +208,25 @@ test('host half: the directive reads settings via ctx.get, never as an undeclare
   assert.doesNotMatch(hostSource, /pctx\.settings\??\./)
 })
 
-test('host half: namespace schema via dynamic schemastery import, era-probed ns', () => {
-  // Dynamic import keeps this file importable by zero-dependency Node tests.
-  assert.match(hostSource, /import\('@deepseek-ai\/schemastery'\)/)
+test('host half: static Config (dsh >= 0.1.7 settings) with volatile probing', () => {
+  // dsh 0.1.7: the row Config IS the settings surface. The Loader needs
+  // `Config` at module import, so schemastery is a STATIC import now (the
+  // devDependency keeps this test importable); `.volatile()` is probed so a
+  // 0.1.6-era schemastery still loads this module.
+  assert.match(hostSource, /import Schema from '@deepseek-ai\/schemastery'/)
+  assert.match(hostSource, /export const Config = Schema\.object\(/)
+  assert.match(hostSource, /typeof schema\.volatile === 'function' \? schema\.volatile\(\) : schema/)
+  // Volatile refs arrive on new hosts; both shapes must read the same way.
+  assert.match(hostSource, /export function valueOf\(value\)/)
+})
+
+test('host half: legacy namespace registration survives behind the era probe', () => {
+  // dsh <= 0.1.6 keeps the registered-namespace path, gated on the service
+  // still exposing register().
   assert.match(hostSource, /import\('@deepseek-ai\/dsh-settings'\)/)
   assert.match(hostSource, /settingsNamespace/)
   assert.match(hostSource, /settings\.register\(ns, schema\)/)
+  assert.match(hostSource, /typeof settings\.register === 'function'/)
 })
 
 test('host half: reads the locale namespace but never writes it', () => {
@@ -253,7 +266,13 @@ test('client bundle: no import/JSX/TypeScript syntax', () => {
 })
 
 test('client bundle: reports ONLY uiLocale into the agent-lang namespace', () => {
-  assert.match(clientSource, /settingsScope\.bind\(\{ namespace: NS \}\)/)
+  // Era-split acquisition: the OLD bound scope and the NEW ConfigForm face
+  // share the set/unset/getSnapshot contract; the plugin never hard-injects
+  // either service (a missing service would leave the fiber PENDING on the
+  // other era).
+  assert.doesNotMatch(clientSource, /exports\.inject = \["locale", "settingsScope"/)
+  assert.match(clientSource, /ctx\.inject\(\["settingsScope"\]/)
+  assert.match(clientSource, /ctx\.inject\(\["configForms"\]/)
   assert.match(clientSource, /scope\.set\("uiLocale", active\)/)
   // never touches the built-in locale namespace with a write
   for (const banned of ['localeScope.set', 'localeScope.unset', 'localeScope.mutate']) {
@@ -394,4 +413,22 @@ test('plugin manifest and bundle patch reference the plugin row', () => {
   assert.match(patch, /- insert:/)
   assert.match(patch, /id: agent-lang/)
   assert.match(patch, /name: 'dsh-agent-lang'/)
+})
+
+test('package meta: dsh 0.1.7 plugin-manager display assets', () => {
+  // dsh 0.1.7 renders a bundle's localized title/description from
+  // `./locale/<tag>.json` exports plus a top-level `icon`; older hosts read
+  // none of it (inert extras), so one build serves every era.
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+  assert.equal(pkg.icon, './icon.svg')
+  assert.equal(pkg.exports['./package.json'], './package.json')
+  assert.equal(pkg.exports['./locale/*.json'], './locale/*.json')
+  assert.ok(pkg.files.includes('locale'), 'locale/ must ship in files[]')
+  assert.ok(pkg.files.includes('icon.svg'), 'icon.svg must ship in files[]')
+  readFileSync(new URL('../icon.svg', import.meta.url), 'utf8')
+  for (const tag of ['en', 'zh']) {
+    const meta = JSON.parse(readFileSync(new URL(`../locale/${tag}.json`, import.meta.url), 'utf8'))
+    assert.equal(typeof meta.meta?.title, 'string', `locale/${tag}.json meta.title`)
+    assert.equal(typeof meta.meta?.description, 'string', `locale/${tag}.json meta.description`)
+  }
 })

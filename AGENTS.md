@@ -28,19 +28,23 @@
 
 | 路径 | 作用 |
 |---|---|
-| `src/index.js` | host 半:注册 settings 命名空间 `agent-lang`(动态 import schemastery)+ 全局动态 runtime-context 指示(`systemPrompt.context`) |
-| `src/client.js` | 浏览器半(手写 ModuleLoader bundle):上报界面语言(`settingsScope.set('uiLocale')`)+ 注册 `settings.plugin.item` 设置卡片 |
+| `src/index.js` | host 半：导出行 `Config`（静态 import schemastery，全字段 `.volatile()` 探测）双时代设置面，旧宿主上另经动态 import 注册 `agent-lang` 命名空间；+ 全局动态 runtime-context 指示（`systemPrompt.context`） |
+| `src/client.js` | 浏览器半（手写 ModuleLoader bundle）：双时代设置面可选注入（旧 settingsScope / 新 configForms）上报界面语言 + 双座位注册设置卡片 |
 | `cordis.patch.yml` | `dsh plugin add` 官方安装通道的挂载声明(insert 一行插件 row,主机面全局挂载) |
 | `dsh.plugin.json` | 插件注册表清单(id `dsh-external/dsh-agent-lang`) |
 | `tests/smoke.mjs` | 冒烟测试(纯文件/helper 级,零依赖):helper 逻辑、源码纪律(require 白名单、无 import/JSX、词典对齐与 19 tag 清单、自称表两半一致)、清单一致性 |
+| `locale/{en,zh}.json` + `icon.svg` | dsh 0.1.7 插件管理页展示资产(多语言标题/描述 + 图标);旧宿主完全忽略 |
 
 ## 核心不变量(改代码前必读)
 
 1. **只注入提示,不改资产**。绝不修改 preset / persona / 工具 schema / 任何 dsh 发行文件:它们是部署资产,升级覆盖 + 影响 request-cache 稳定性设计。唯一通道是运行时注册的提示贡献。
 2. **通道是 `systemPrompt.context()`,不是 `section()`**。理由:与沙箱/审批策略同列(语义契合)、每轮请求刷新(语言切换下一轮生效)、渲染在请求末尾(近因压过工具 schema 的英文指引)。空文本贡献会在渲染时被丢弃——**完全未检测到语言**时返回 '' 是**特性**(零提示噪声);**英文自 v0.3.0 起是正常目标语言**(部分模型思考/输出会混杂多语言,显式英文指示同样纠正),仅为英文自身省略 ", not in English" 从句。已知例外:`minimal` preset 的 persona `complete: true` 且 `includeRuntimeContext: false`,提示对一切后挂贡献者封闭——接受,文档声明,不要试图穿透(waterfall 也改不动 complete 恢复)。
 3. **语言来源优先级(纯函数 `pickDisplayLanguage`,测试覆盖)**:mode off → 无;force+合法 forceLocale → forceLocale;auto:locale ns 的 `preference` > agent-lang ns 的 `uiLocale`;非法 BCP 47 一律忽略。**绝不写 `locale` 命名空间**(那是用户的显式选择,写它会破坏「absence delegates to browser」语义);client 只写自己 ns 的 `uiLocale` 单字段(settings 写是逐字段深合并,mode/forceLocale 永远幸存)。
-4. **设置命名空间 schema 必须是可调用的 schemastery 对象**(`schema(merged)` 解析值;zod 会抛 `not a function` 且命名空间永不服务 → 卡片永不出现,2026-08 dsh-better-workspace 实测根因)。因此 host 半用**动态** `import('@deepseek-ai/schemastery')`(保持冒烟测试零依赖可 import 本文件),运行时经 profile 共享 fallback 解析(实测可行);`@deepseek-ai/dsh-settings` 的 `settingsNamespace()` 做 era 探测(新 dsh 已移除该 helper,register 直接收字符串;旧 dsh 收 branded 形态,单次调用双兼容)。schemastery 只进 peerDependencies,不进 dependencies。
-5. **无构建**。host 半纯 ESM JS;client 半是**手写 ModuleLoader bundle**(`window.__ModuleLoader__.load({id, factory})`,id=包名):`require` 只允许基线白名单(react、react/jsx-runtime、react-dom、react-dom/client、@deepseek-ai/cordis、@deepseek-ai/dsh-client-store、@deepseek-ai/dsh-client-ui-slots、@deepseek-ai/dsh-client-ui-primitives),冒烟测试强制;无 import/JSX/TS 语法。
+4. **设置双时代(v0.6.0 起,dsh 0.1.7 分界,运行时探测 `typeof settings.register === 'function'`)**:
+   - **旧(<=0.1.6)**:命名空间 schema 必须是可调用的 schemastery 对象(`schema(merged)` 解析值;zod 会抛 `not a function` 且命名空间永不服务);host 半经动态 `import('@deepseek-ai/dsh-settings')` + `settingsNamespace()` era 探测注册 `agent-lang` 命名空间,值存 `~/.dsh/settings.yaml`。
+   - **新(>=0.1.7)**:`register()`/SettingsScope 已删除,插件的设置面**就是行 Config**——host 半**静态** `import Schema from '@deepseek-ai/schemastery'` 并导出 `Config`(字段与旧命名空间 schema 完全同名同形;行 id `agent-lang` 与旧命名空间同串,旧 settings.yaml 一次性导入直接落位);全部字段经 `live()` 探测加 `.volatile()`(已发布 npm 的 3.18.2 **没有** volatile,探测是硬要求;0.1.7 宿主的 profile 内 schemastery 才有),apply 收到 `Volatile<T>` 引用,`valueOf()` 双形态读取。指示文本闭包每次组装重读引用,翻转下一轮生效,无需监听 `loader/volatile-update`。语言偏好读取:旧 = `settings.get('locale')`;新 = `settings.describe()` 里 ns `'locale'` 的表单值。
+   - **静态导入的代价(接受)**:宿主半不再是零依赖可 import,仓库新增 `devDependencies`(@deepseek-ai/schemastery),冒烟测试前需 `npm install`;运行时解析与旧动态导入同路(profile 共享 fallback,已验证)。schemastery 只进 peerDependencies + devDependencies,不进 dependencies。
+5. **无构建**。host 半纯 ESM JS;client 半是**手写 ModuleLoader bundle**(`window.__ModuleLoader__.load({id, factory})`,id=包名):`require` 只允许基线白名单(react、react/jsx-runtime、react-dom、react-dom/client、@deepseek-ai/cordis、@deepseek-ai/dsh-client-store、@deepseek-ai/dsh-client-ui-slots、@deepseek-ai/dsh-client-ui-primitives),冒烟测试强制;无 import/JSX/TS 语法。**client 半的 `exports.inject` 只声明跨时代必有服务(locale、slots),设置面一律可选注入**——0.1.7 删除了 `settingsScope` 服务,硬注入会让 fiber 永远 PENDING(卡片与上报一起死);旧时代走 `ctx.inject(['settingsScope'], …)` 绑命名空间,新时代走 `ctx.inject(['configForms'], …)` 取 `configForms.get('agent-lang')`,两代 face 同契约(getSnapshot/set/unset),卡内零改动。设置卡双座位(settings.plugin.item + plugins.bundle.config)不变:0.1.7 上旧座位静默挂起,新座位照常。
 6. **slot 契约**:`settings.plugin.item` 是 keyed 槽,**key = 设置命名空间**(`agent-lang`);tab 派发「宿主已服务命名空间 ∩ 已注册卡片」——宿主半不注册命名空间,卡片永远不出现。卡片 chrome 必须手写(`dl-` 前缀 CSS 镜像官方 PluginCard.module.css 的 token),不能 import ui-settings-plugins(不在白名单)。注册里的 `locale: DICT_NS` 让框架把 `t` 座位绑到本插件的词典命名空间,该座位**按 locale revision 重新派生**(渲染机制给每个 outlet 订阅 locale 变化:语言切换即重渲染并换新的 `t` 引用),所以卡片文案跟随 GUI 语言实时切换,插件自己不必订阅刷新、也不得在 apply 里把词典捕获成一次性值。命名空间不可用(`snap.status !== 'ready'`)时卡片渲染 null(官方行为)。
 7. **词典纪律(21 门语言)**:NS = agentLang;`zh` / `en` 是文件内的两本基础词典,其余 **19 门第三语言**在 `LOCALES` 表里一门一条(每条前一行 `/* locale: <tag> */` 标记;繁体三门 `zh-hk` / `zh-mo` / `zh-tw`,其中 zh-mo 与 zh-hk 同文)。注册表按**精确 id** 查表,不会替我们把 `zh-Hant-*` 折到港式,因此 `LOCALE_ALIASES` 把宏标签 `zh-hant` / `zh-hans` 指到同一批词典对象上(引用而非副本,没有第二本要对齐);区域 id 靠语言包自己的 fallback 链走到别名。**每本词典的 key 必须与 `zh` 完全相等**——缺键只会静默回退英文,卡片就成半翻译状态——冒烟测试 `every shipped dictionary carries the same key set as zh` 按标记切片逐门比对,另一条锁定 19 个 tag 的完整清单。加一门语言 = 在 `LOCALES` 追加一个带标记的条目再跑测试,不改任何逻辑:注册是一次 `ctx.locale.register(DICT_NS, Object.assign({}, LOCALE_ALIASES, LOCALES))`,表里有什么就发布什么,不可能漏注册。语言自称映射(共 21 条,含 en)host/client 各一份,冒烟测试比对两边集合,改要同步。
    词典只在语言包(`ctx.locale.addLanguage`,如 dsh-i18n)把该 tag 注册进 catalog 后才可能成为 active——**本插件不自己 addLanguage**:那会把半翻译语言塞进 设置 → 通用 → 语言 的选择器。

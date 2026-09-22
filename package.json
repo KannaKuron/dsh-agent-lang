@@ -1,6 +1,6 @@
 {
   "name": "dsh-agent-lang",
-  "version": "0.5.4",
+  "version": "0.6.0",
   "description": "工具调用描述 / 模型思考 / 回复输出三个语言通道:跟随界面语言、强制指定或关闭,一条运行时指示实现,不改动预设与工具 schema。· Language control for tool-call descriptions, model thinking, and replies: follow the GUI language, force a fixed tag, or off — via one runtime-context directive, no preset or tool schema touched.",
   "type": "module",
   "repository": {
@@ -8,10 +8,12 @@
     "url": "git+https://github.com/KannaKuron/dsh-agent-lang.git"
   },
   "main": "src/index.js",
+  "icon": "./icon.svg",
   "exports": {
     ".": "./src/index.js",
     "./client": "./src/client.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
   },
   "engines": {
     "node": ">=18",
@@ -33,6 +35,8 @@
   },
   "files": [
     "src",
+    "locale",
+    "icon.svg",
     "cordis.patch.yml",
     "dsh.plugin.json",
     "README.md",
@@ -58,6 +62,9 @@
   "license": "MIT",
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "devDependencies": {
     "@deepseek-ai/schemastery": "^3.18.1"
   },
   "publishConfig": {

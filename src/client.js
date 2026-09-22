@@ -885,17 +885,34 @@ window.__ModuleLoader__.load({
 
 		exports.name = "dsh-agent-lang/client";
 
-		/** Required client services: locale runtime, settings scopes, slots. */
-		exports.inject = ["locale", "settingsScope", "slots"];
+		/**
+		 * Required client services: the locale runtime and slots exist on every
+		 * host era. The settings face is acquired OPTIONALLY below - a hard inject
+		 * would leave this fiber PENDING forever on the era that dropped the
+		 * service (dsh 0.1.7 removed settingsScope), taking the card and the
+		 * reporter down together.
+		 */
+		exports.inject = ["locale", "slots"];
 
 		exports.apply = function (ctx) {
-			var scope = ctx.settingsScope.bind({ namespace: NS });
-			var localeScope = ctx.settingsScope.bind({ namespace: LOCALE_NS });
+			// Era-split settings face. Both candidates expose the SAME contract the
+			// card consumes - getSnapshot()/set(field, value)/unset(field) - because
+			// ConfigForm (dsh >= 0.1.7) kept the SettingsScope face when the service
+			// was replaced by the plugin-Config projection.
+			//
+			// OLD (<= 0.1.6): the client settingsScope service binds a namespace.
+			// NEW (>= 0.1.7): ui-settings configForms service serves one form per
+			// live profile entry; the form key is the row id - "agent-lang", the
+			// same string as the old namespace, and "locale" for the preference.
+			var scope = null;
+			var localeScope = null;
+			var wired = false;
 
 			var lastReported;
 
 			function report(snapshot) {
 				try {
+					if (!scope || typeof scope.set !== "function") return;
 					var active = snapshot && typeof snapshot.active === "string" ? snapshot.active : undefined;
 					if (!active || active === lastReported) return;
 					var previous = lastReported;
@@ -931,17 +948,6 @@ window.__ModuleLoader__.load({
 				} catch (error) {
 					console.warn(TAG + " dictionary registration failed:", error && error.message ? error.message : error);
 				}
-				try {
-					report(ctx.locale.getSnapshot());
-				} catch (error) {
-					console.warn(TAG + " initial snapshot failed:", error && error.message ? error.message : error);
-				}
-				var disposeListener = ctx.on("locale/change", report);
-				disposers.push(function () {
-					try {
-						if (typeof disposeListener === "function") disposeListener();
-					} catch (error) { /* best effort */ }
-				});
 				return function () {
 					for (var i = 0; i < disposers.length; i++) {
 						try {
@@ -949,60 +955,122 @@ window.__ModuleLoader__.load({
 						} catch (error) { /* best effort */ }
 					}
 				};
-			}, "dsh-agent-lang: styles, dictionaries, ui-locale report");
+			}, "dsh-agent-lang: styles, dictionaries");
 
-			// Guarded registration (the dsh-better-workspace pattern): a thrown
-			// register degrades this one seat, never the plugin fiber.
-			try {
-				var slots = ctx.slots;
-				if (!slots || typeof slots.register !== "function" || typeof slots.inject !== "function") {
-					console.warn(TAG + " slots service unavailable; settings card skipped");
-					return;
+			/** Reporter + card wiring, once EITHER era settings face exists. */
+			function wire() {
+				if (wired || !scope) return;
+				wired = true;
+				try {
+					report(ctx.locale.getSnapshot());
+				} catch (error) {
+					console.warn(TAG + " initial snapshot failed:", error && error.message ? error.message : error);
 				}
-				var injected = function () {
-					// The inject factory's returned members become the
-					// component's props: the two bound settings scopes ride
-					// here as PLAIN members (top-level options fields do NOT
-					// reach the component).
-					return {
-						scope: scope,
-						localeScope: localeScope,
-						selectableLocales: function () {
-							try {
-									return ctx.locale.getSnapshot().locales || [];
-							} catch (error) {
-									return [];
-							}
-						},
+				var disposeListener = ctx.on("locale/change", report);
+				ctx.effect(function () {
+					return function () {
+						try {
+							if (typeof disposeListener === "function") disposeListener();
+						} catch (error) { /* best effort */ }
 					};
-				};
-				// Legacy seat (dsh <= 0.1.6-alpha.1): Settings → Plugins card,
-				// keyed by the settings namespace.
-				slots.inject("settings.plugin.item", function () {
-					return slots.register({
-						name: "settings.plugin.item",
-						key: NS,
-						locale: DICT_NS,
-						inject: injected,
-					}, function CardWithBoundary(props) {
-						return E(QuietBoundary, null, E(DescLangCard, props));
-					});
-				});
-				// dsh 0.1.6-alpha.2+: the Plugins page's bundle configuration
-				// seat, keyed by the PACKAGE name. Both injects wait for their
-				// own declaration, so exactly one is live on any host version.
-				slots.inject("plugins.bundle.config", function () {
-					return slots.register({
-						name: "plugins.bundle.config",
-						key: "dsh-agent-lang",
-						locale: DICT_NS,
-						inject: injected,
-					}, function BundleConfigWithBoundary(props) {
-						return E(QuietBoundary, null, E(DescLangCard, props));
-					});
+				}, "dsh-agent-lang: ui-locale report listener");
+				registerCards();
+			}
+
+			// OLD era (dsh <= 0.1.6): bound settings scopes. The optional inject
+			// never fires on dsh >= 0.1.7, where the service no longer exists.
+			try {
+				ctx.inject(["settingsScope"], function (sctx) {
+					try {
+						var svc = sctx && sctx.settingsScope;
+						if (!svc || typeof svc.bind !== "function") return;
+						scope = svc.bind({ namespace: NS });
+						localeScope = svc.bind({ namespace: LOCALE_NS });
+						wire();
+					} catch (error) {
+						console.warn(TAG + " settingsScope acquisition failed:", error && error.message ? error.message : error);
+					}
 				});
 			} catch (error) {
-				console.warn(TAG + " settings card registration failed:", error && error.message ? error.message : error);
+				console.warn(TAG + " settingsScope wiring failed:", error && error.message ? error.message : error);
+			}
+
+			// NEW era (dsh >= 0.1.7): one ConfigForm per live profile entry; the
+			// form key is the row id, identical to the old namespace string.
+			try {
+				ctx.inject(["configForms"], function (fctx) {
+					try {
+						var forms = fctx && fctx.configForms;
+						if (!forms || typeof forms.get !== "function") return;
+						scope = forms.get(NS);
+						localeScope = forms.get(LOCALE_NS);
+						wire();
+					} catch (error) {
+						console.warn(TAG + " configForms acquisition failed:", error && error.message ? error.message : error);
+					}
+				});
+			} catch (error) {
+				console.warn(TAG + " configForms wiring failed:", error && error.message ? error.message : error);
+			}
+
+			/** Card registration (called by wire once a settings face exists). */
+			function registerCards() {
+				// Guarded registration (the dsh-better-workspace pattern): a thrown
+				// register degrades this one seat, never the plugin fiber.
+				// Guarded registration (the dsh-better-workspace pattern): a thrown
+				// register degrades this one seat, never the plugin fiber.
+				try {
+					var slots = ctx.slots;
+					if (!slots || typeof slots.register !== "function" || typeof slots.inject !== "function") {
+						console.warn(TAG + " slots service unavailable; settings card skipped");
+						return;
+					}
+					var injected = function () {
+						// The inject factory's returned members become the
+						// component's props: the two bound settings scopes ride
+						// here as PLAIN members (top-level options fields do NOT
+						// reach the component).
+						return {
+							scope: scope,
+							localeScope: localeScope,
+							selectableLocales: function () {
+								try {
+										return ctx.locale.getSnapshot().locales || [];
+								} catch (error) {
+										return [];
+								}
+							},
+						};
+					};
+					// Legacy seat (dsh <= 0.1.6-alpha.1): Settings → Plugins card,
+					// keyed by the settings namespace.
+					slots.inject("settings.plugin.item", function () {
+						return slots.register({
+							name: "settings.plugin.item",
+							key: NS,
+							locale: DICT_NS,
+							inject: injected,
+						}, function CardWithBoundary(props) {
+							return E(QuietBoundary, null, E(DescLangCard, props));
+						});
+					});
+					// dsh 0.1.6-alpha.2+: the Plugins page's bundle configuration
+					// seat, keyed by the PACKAGE name. Both injects wait for their
+					// own declaration, so exactly one is live on any host version.
+					slots.inject("plugins.bundle.config", function () {
+						return slots.register({
+							name: "plugins.bundle.config",
+							key: "dsh-agent-lang",
+							locale: DICT_NS,
+							inject: injected,
+						}, function BundleConfigWithBoundary(props) {
+							return E(QuietBoundary, null, E(DescLangCard, props));
+						});
+					});
+				} catch (error) {
+					console.warn(TAG + " settings card registration failed:", error && error.message ? error.message : error);
+				}
+
 			}
 		};
 

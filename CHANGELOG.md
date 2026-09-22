@@ -3,6 +3,18 @@
 > 倒序排列,新版本条目在最上面。条目格式:`## vX.Y.Z — YYYY-MM-DD` + 类型(feat / fix / docs / chore)+ 要点 + 相关链接。
 > 纪律见 AGENTS.md「变更记录纪律」:发版前先更新本文件并随版本提交;事故复盘、复现与真机验证记录也记在这里。
 
+## v0.6.0 — 2026-09-22
+
+**类型**:feat(适配 dsh v0.1.7-alpha.1,保持旧版本兼容)
+
+- **设置面双时代**(dsh 0.1.7 将 settings.register/SettingsScope 替换为插件行 Config + profile patch 存储):
+  - host 半静态导出 `Config`（字段与旧命名空间 schema 同名同形，行 id `agent-lang` 与旧命名空间同串，旧 settings.yaml 一次性导入直接落位），全字段 `.volatile()` 探测标记（已发布的 npm schemastery 3.18.2 无此方法，探测是硬要求）；apply 收到 Volatile 引用，`valueOf()` 双形态读取，指示闭包每次组装重读，翻转下一轮生效。
+  - 语言偏好读取：旧 = `settings.get('locale')`；新 = `settings.describe()` 重 ns `'locale'` 的表单值（优先级链不变）。
+  - client 半 `exports.inject` 改为只声明跨时代必有服务(locale/slots)，设置面可选注入：旧 `settingsScope` / 新 `configForms.get('agent-lang')`（两代 face 同契约，卡片与上报零改动；硬注入在 0.1.7 上会让 fiber 永远 PENDING）；设置卡双座位策略不变，0.1.7 上由 `plugins.bundle.config` 座位承接。
+- **插件管理页展示资产**(dsh 0.1.7 新特性)：新增 `icon.svg` + `locale/{en,zh}.json`（多语言标题/描述），旧宿主完全忽略，单包双时代。
+- **仓库变更**:host 半静态 import schemastery（Loader 需要模块顶层的 Config），新增 `devDependencies`（冒烟测试前需 `npm install`；运行时解析仍走 profile 共享 fallback，与旧动态导入同路）；schemastery 同时声明在 peerDependencies 与 devDependencies（dsh 0.1.7 推荐的 link 开发姿势）。
+- 冒烟测试 36 项全绿（新增 Config/volatile/双时代获取/包元数据断言）。
+
 ## v0.5.4 — 2026-09-19
 
 **类型**:fix(bundle 页卡片壳)
