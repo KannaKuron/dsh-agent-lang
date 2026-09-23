@@ -208,13 +208,16 @@ test('host half: the directive reads settings via ctx.get, never as an undeclare
   assert.doesNotMatch(hostSource, /pctx\.settings\??\./)
 })
 
-test('host half: static Config (dsh >= 0.1.7 settings) with volatile probing', () => {
+test('host half: lazy Config (dsh >= 0.1.7 settings) with volatile probing', () => {
   // dsh 0.1.7: the row Config IS the settings surface. The Loader needs
-  // `Config` at module import, so schemastery is a STATIC import now (the
-  // devDependency keeps this test importable); `.volatile()` is probed so a
-  // 0.1.6-era schemastery still loads this module.
-  assert.match(hostSource, /import Schema from '@deepseek-ai\/schemastery'/)
-  assert.match(hostSource, /export const Config = Schema\.object\(/)
+  // `Config` at module import, so the import is deferred with top-level await
+  // (the Loader awaits the module, so `Config` is defined before it is read) —
+  // a STATIC peer import would make an unresolvable schemastery kill the whole
+  // row silently (non-fatal skip in the Loader, client half never loads).
+  // `.volatile()` is probed so a 0.1.6-era schemastery still loads this module.
+  assert.match(hostSource, /await import\('@deepseek-ai\/schemastery'\)/)
+  assert.doesNotMatch(hostSource, /^import Schema from '@deepseek-ai\/schemastery'/m)
+  assert.match(hostSource, /export const Config = Schema === null \? undefined : Schema\.object\(/)
   assert.match(hostSource, /typeof schema\.volatile === 'function' \? schema\.volatile\(\) : schema/)
   // Volatile refs arrive on new hosts; both shapes must read the same way.
   assert.match(hostSource, /export function valueOf\(value\)/)
@@ -405,10 +408,52 @@ test('package manifest: client entry + dsh.client declaration', () => {
   assert.ok(!pkg.dependencies, 'runtime deps are peers resolved through the profile, not installed')
 })
 
+test('package manifest: declares the dsh peer the 0.1.7+ compatibility gate reads', () => {
+  // dsh 0.1.7-rc.1 added the ONLY enforced plugin-compatibility mechanism
+  // (packages/boot/app-boot/src/plugin-compatibility.ts): every
+  // peerDependencies entry named `@deepseek-ai/dsh` or `@deepseek-ai/dsh-*`
+  // is compared — prereleases participating — against the running dsh
+  // version, and a mismatch silently removes the plugin (bundle layer
+  // skipped, row disabled). A manifest with no such peer is never validated,
+  // so the range is part of the contract and this test pins it:
+  //   floor `>=0.1.0` = the line this build serves (old era <= 0.1.6 through
+  //                      the registered namespace, new era >= 0.1.7 through
+  //                      the row Config), the floor engines.dsh already names;
+  //   NO ceiling. This plugin survives host changes by RUNTIME detection (the
+  //   dual-era probes), and the family rule is that an upgrading user must not
+  //   lose the plugin to a version the gate merely *guesses* is incompatible:
+  //   an upper bound would disable every family plugin on the next dsh line
+  //   before anyone observed a real break. When a future line does break a
+  //   contract, the adapting release tightens this range together with the
+  //   code fix.
+  // Not an enumerated version list either: the ecosystem's counter-example is
+  // dsh-any-background@0.3.0, whose `... || 0.1.7-alpha.1` enumeration dropped
+  // it on 0.1.7-rc.1 and forced per-machine exemptions.
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
+  assert.equal(pkg.peerDependencies['@deepseek-ai/dsh'], '>=0.1.0')
+  assert.match(pkg.engines.dsh, /^>=0\.1\.0$/, 'peer floor and engines.dsh must tell one compatibility story')
+  // OPTIONAL, and it has to stay optional: the gate reads peerDependencies
+  // only (`plugin-compatibility.ts` touches no other field, and dsh's runtime
+  // reads `peerDependenciesMeta` nowhere at all), while a package manager with
+  // autoInstallPeers (pnpm's default) would try to RESOLVE the range against
+  // the registry. Every published @deepseek-ai/dsh version is a prerelease,
+  // and a plain range excludes prereleases, so an auto-installing client fails
+  // the whole install with ERR_PNPM_NO_MATCHING_VERSION / ERESOLVE. Optional
+  // peers are not auto-installed, which removes the hazard without weakening
+  // the gate (verified live: a manifest whose peer reads 999.0.0 is still
+  // dropped even while the optional flag is set).
+  assert.equal(pkg.peerDependenciesMeta?.['@deepseek-ai/dsh']?.optional, true)
+})
+
 test('plugin manifest and bundle patch reference the plugin row', () => {
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
   const manifest = JSON.parse(readFileSync(new URL('../dsh.plugin.json', import.meta.url), 'utf8'))
   assert.equal(manifest.id, 'dsh-external/dsh-agent-lang')
   assert.equal(manifest.main, './src/index.js')
+  // Two manifests, one version: the npm `version` script syncs them, so this
+  // assertion catches a hand-edited bump that missed one of the pair.
+  assert.equal(manifest.version, pkg.version, 'dsh.plugin.json version drifted from package.json')
+  assert.equal(manifest.engines.dsh, pkg.engines.dsh, 'the two manifests disagree about the dsh floor')
   const patch = readFileSync(new URL('../cordis.patch.yml', import.meta.url), 'utf8')
   assert.match(patch, /- insert:/)
   assert.match(patch, /id: agent-lang/)
@@ -419,6 +464,12 @@ test('package meta: dsh 0.1.7 plugin-manager display assets', () => {
   // dsh 0.1.7 renders a bundle's localized title/description from
   // `./locale/<tag>.json` exports plus a top-level `icon`; older hosts read
   // none of it (inert extras), so one build serves every era.
+  // `exports["./package.json"]` is load-bearing, not cosmetic: the Electron
+  // renderer discovers a client package through
+  // `createRequire(baseUrl).resolve("<pkg>/package.json")`
+  // (packages/client/modules/src/index.ts locatePkgJson, the no-loader
+  // fallback), which obeys the exports map — without the entry the client half
+  // never enters the boot graph while every host log stays green.
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
   assert.equal(pkg.icon, './icon.svg')
   assert.equal(pkg.exports['./package.json'], './package.json')

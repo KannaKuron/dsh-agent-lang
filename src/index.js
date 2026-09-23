@@ -85,7 +85,31 @@
  * so one build serves both hosts.
  */
 
-import Schema from '@deepseek-ai/schemastery'
+/**
+ * The schemastery module, resolved LAZILY (v0.7.0): `@deepseek-ai/schemastery`
+ * is a PEER, so it is not resolvable by plain Node from this package — it comes
+ * from the host's own resolution (the profile shared fallback). A deployment
+ * whose fallback lacks it used to fail the *static* import at the top of this
+ * file, and the Loader treats a failed plugin import as a non-fatal skip
+ * (`vendor/loader/src/config/entry.ts` `_init()`: logger.error + return, no
+ * fiber) — so the row silently never mounted: no host half, no `dsh.client`
+ * scan, no client bundle in the boot graph, and every host log stays green
+ * (same all-green failure class as dsh-better-workspace issue #9; reproduced
+ * with a fixture plugin whose only difference was a static peer import).
+ * Deferring the import hides the schema where the module is absent instead of
+ * killing the row: the prompt directive and the browser card keep working.
+ */
+let Schema = null
+try {
+  Schema = (await import('@deepseek-ai/schemastery')).default
+} catch (error) {
+  Schema = null
+  console.warn(
+    '[dsh-agent-lang] @deepseek-ai/schemastery is not resolvable here; the row Config surface is absent'
+    + ' (the language directive and the browser card do not depend on it): '
+    + (error && error.message || String(error)),
+  )
+}
 
 /** Plugin identity for cordis.yml rows. */
 export const name = 'dsh-agent-lang'
@@ -144,8 +168,11 @@ function live(schema) {
  * whose values keep flowing through the registered settings namespace.
  * Field names and shapes are IDENTICAL to the old namespace schema, so the
  * legacy `settings.yaml` one-shot import and the client card map 1:1.
+ * Absent (undefined) when schemastery is unresolvable: cordis then passes the
+ * row config through unvalidated and the card loses its form controls, instead
+ * of the whole row disappearing.
  */
-export const Config = Schema.object({
+export const Config = Schema === null ? undefined : Schema.object({
   // Browser-reported active GUI locale; the client half writes ONLY this
   // field, so user-configured modes/locales survive every report.
   uiLocale: live(Schema.string().pattern(BCP47).required(false)),

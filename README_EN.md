@@ -46,11 +46,12 @@ Plain JS, no build step, no installed dependencies (schemastery is a peer resolv
 
 ## Version compatibility
 
-**dsh 0.1.6-alpha.1 was checked item by item and needs no code change** (record: CHANGELOG v0.4.3):
+**dsh 0.1.7-rc.1 was checked item by item on a real isolated instance and needs no code change** (record: CHANGELOG v0.7.0); the same holds for 0.1.6-alpha.1 (CHANGELOG v0.4.3):
 
-- The `systemPrompt.context()` contract is unchanged: `PromptContext` is still `{ name, order, text }`, with order 125 still after the official CONTEXT_ORDERS. The new `interpolate: false` applies to **sections** only, which this plugin does not use.
+- The `systemPrompt.context()` contract is unchanged: `PromptContext` is still `{ name, order, text }`, with order 125 still after the official CONTEXT_ORDERS. The `interpolate: false` flag applies to **sections** only, which this plugin does not use.
 - The injected text carries no `{{...}}` interpolation risk: every language source (forced tag, explicit setting, browser report) passes BCP47 validation before it reaches the text.
-- Icons, the `settings.plugin.item` slot, and the settings / locale service contracts are unchanged.
+- The settings surface still splits at 0.1.7 (row `Config` + `configForms` above it, the registered namespace below), and the settings card still ships both seats: `settings.plugin.item` (hosts ≤ 0.1.6, where it silently waits on 0.1.7+) and `plugins.bundle.config` keyed by the package name (0.1.6-alpha.2+, live on 0.1.7).
+- The manifest declares the compatibility peer dsh 0.1.7-rc.1 enforces — `"@deepseek-ai/dsh": ">=0.1.0"` (optional, so package managers never auto-install a prerelease-only package). The declaration puts this plugin under the gate (it carried no such peer before, so it was never validated) while leaving the range open-ended: the plugin adapts to host changes by runtime detection, so a future dsh upgrade never disables it silently.
 
 ## Known limits
 

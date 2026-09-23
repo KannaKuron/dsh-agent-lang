@@ -72,15 +72,16 @@ pnpm add <tarball 路径>          # package.json 的 dsh.bundle.patch 声明会
 
 ## 版本兼容
 
-**dsh 0.1.6-alpha.1 已逐项核对通过,无需代码改动**(核对记录见 CHANGELOG v0.4.3):
+**dsh 0.1.7-rc.1 已在隔离实例上逐项复核通过,无需代码改动**(核对记录与真机证据见 CHANGELOG v0.7.0);0.1.6-alpha.1 的核对记录见 CHANGELOG v0.4.3:
 
-- `systemPrompt.context()` 契约未变:`PromptContext` 仍是 `{ name, order, text }`,order 125 仍在官方 CONTEXT_ORDERS 之后;新版只给 **sections** 加了 `interpolate: false`,不涉及 context 贡献。
+- `systemPrompt.context()` 契约未变:`PromptContext` 仍是 `{ name, order, text }`,order 125 仍在官方 CONTEXT_ORDERS 之后;`interpolate: false` 只作用于 **sections**,本插件不用。
 - 注入文本不存在 `{{...}}` 插值风险:三条语言来源(强制标签 / 设置里的显式选择 / 浏览器上报)全部经 BCP47 校验后才进入文本。
-- 图标与槽位契约(`settings.plugin.item`)、settings / locale 服务均无变化。
+- 设置面仍在 0.1.7 分界:0.1.7 起是「行 `Config` + `configForms`」,0.1.6 及以前是注册命名空间;设置卡两个座位照旧——`settings.plugin.item`(≤0.1.6 宿主;0.1.7 上无 owner,静默挂起)与 `plugins.bundle.config`(按包名 key,0.1.6-alpha.2 起,0.1.7 上实际生效)。
+- 插件清单声明了 dsh 0.1.7-rc.1 起强制执行的兼容 peer:`"@deepseek-ai/dsh": ">=0.1.0"`(标为 optional,避免包管理器把只有预发布版本的 `@deepseek-ai/dsh` 拉进安装)。该声明让本插件真正被兼容门禁覆盖(此前没有任何这类 peer,等于永不被校验),同时**不设上界**:插件靠运行时探测跨版本自愈,未来 dsh 升级不会被自动停用。
 
 ## 已知边界
 
-- **新装/更新后的首次启动需硬刷新一次**(2026-08-31 真机实测):首次页面加载可能赶上客户端模块表重建(combo revision 变化),新装包被暂时排除——表现为设置卡片未出现,但 `settings.yaml` 已有 `uiLocale` 上报痕迹(上报先于剔除发生)。硬刷新(⌘/Ctrl+Shift+R)即恢复;日常重启不复发。
+- **新装/更新后的首次启动需硬刷新一次**(2026-08-31 真机实测):首次页面加载可能赶上客户端模块表重建(combo revision 变化),新装包被暂时排除——表现为设置卡片未出现,但上报痕迹已经落盘(0.1.6 及以前在 `settings.yaml`,`0.1.7` 起在 profile 的 `cordis.patch.yml` 用户层:上报先于剔除发生)。硬刷新(⌘/Ctrl+Shift+R)即恢复;日常重启不复发。
 - **minimal 模式**:提示词封闭(见上表),不受本插件影响。
 - **无浏览器页面时**(如纯 CLI 部署):只有「显式选择」一条检测链;从未在设置里选过语言则不注入。
 - **多浏览器/远程页面**:界面语言是全局单值,后打开的页面上报会覆盖前者;非 loopback 页面的设置选择可能进程本地化(DSH 行为)。
