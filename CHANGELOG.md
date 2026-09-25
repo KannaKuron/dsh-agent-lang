@@ -51,6 +51,8 @@
   - **GUI 级优先级旁证**:浏览器 `navigator.language=zh-CN`、`languages=[zh-CN, zh]`,而设了 `locale.preference: en` 后 `document.documentElement.lang=en`、界面与卡片全英文 ⇒ 官方的界面语言同样让显式选择压过浏览器上报,本插件把 `preference` 放在优先级顶端与官方语义同向。
   - 冒烟测试 **39 项全绿**。
 - 未在真机覆盖:`minimal` preset 的封闭边界(设计边界,见 AGENTS 不变量 2)未重测;0.1.0…0.1.6 旧宿主本机无 runtime,旧时代路径(旧座位卡片 + chevron 图标)由运行时探测与既有测试保证;桌面端由 Lead 集成阶段统一实测(见上)。
+- 发布:npm OIDC 全链路零令牌,`gh run` 36122290063 success(`+ dsh-agent-lang@0.7.1`,带 provenance);发布产物下载复核含本轮两处改动(令牌 CSS、图标候选链)与 `peer >=0.1.0` + optional;npmjs `latest` = 0.7.1,npmmirror 已同步。
+- Release:https://github.com/KannaKuron/dsh-agent-lang/releases/tag/v0.7.1
 
 ## v0.7.0 — 2026-09-23
 
