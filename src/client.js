@@ -151,7 +151,7 @@ window.__ModuleLoader__.load({
 			"sub.title": "队员与子代理",
 			"sub.on": "同样生效",
 			"sub.off": "仅主代理",
-			"sub.hint": "智能体团队的队员与普通子代理默认同样带上这段语言指示;选「仅主代理」后只对主代理注入(fork 出的队员仍继承主代理已提交的历史快照,不受此开关影响)。",
+			"sub.hint": "智能体团队的队员与普通子代理默认同样带上这段语言指示;选「仅主代理」后只对主代理注入(fork 出的队员仍继承主代理已提交的历史快照,不受此开关影响)。自带提示词的外部子代理(codex / claude-code 等)与极简模式的封闭提示本就不经这条通道,开关对它们无影响。",
 		};
 
 		var en = {
@@ -174,7 +174,7 @@ window.__ModuleLoader__.load({
 			"sub.title": "Teammates & subagents",
 			"sub.on": "Same directive",
 			"sub.off": "Main agent only",
-			"sub.hint": "Agent-team teammates and ordinary subagents carry the same language directive by default; \"Main agent only\" withholds it from every child agent. A forked teammate still inherits the main agent's already-committed history snapshot, which this switch does not rewrite.",
+			"sub.hint": "Agent-team teammates and ordinary subagents carry the same language directive by default; \"Main agent only\" withholds it from every child agent. A forked teammate still inherits the main agent's already-committed history snapshot, which this switch does not rewrite.Subagents that bring their own prompt (codex / claude-code, …) and the sealed minimal prompt never pass through this channel, so the switch does not affect them.",
 		};
 
 		/* Third-language dictionaries, keyed by lowercase BCP-47 tag — the registry
@@ -203,7 +203,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "أعضاء الفريق والوكلاء الفرعيون",
 				"sub.on": "التعليمة نفسها",
 				"sub.off": "الوكيل الرئيسي فقط",
-				"sub.hint": "يحصل أعضاء فريق الوكلاء والوكلاء الفرعيون العاديون افتراضيًا على تعليمة اللغة نفسها؛ و«الوكيل الرئيسي فقط» يمنعها عن كل الوكلاء الأبناء. العضو المنشأ عبر fork يرث مع ذلك لقطة السجل المثبَّتة مسبقًا للوكيل الرئيسي، وهذا المفتاح لا يعيد كتابتها.",
+				"sub.hint": "يحصل أعضاء فريق الوكلاء والوكلاء الفرعيون العاديون افتراضيًا على تعليمة اللغة نفسها؛ و«الوكيل الرئيسي فقط» يمنعها عن كل الوكلاء الأبناء. العضو المنشأ عبر fork يرث مع ذلك لقطة السجل المثبَّتة مسبقًا للوكيل الرئيسي، وهذا المفتاح لا يعيد كتابتها.الوكلاء الفرعيون الخارجيون الذين يجلبون تعليماتهم الخاصة (codex / claude-code وما شابه) وتعليمات minimal المغلقة لا تمر عبر هذه القناة، فلا يؤثر عليهم هذا المفتاح.",
 			},
 			/* locale: de */
 			"de": {
@@ -226,7 +226,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "Teammitglieder & Subagenten",
 				"sub.on": "Gleiche Anweisung",
 				"sub.off": "Nur Hauptagent",
-				"sub.hint": "Teammitglieder und gewöhnliche Subagenten erhalten standardmäßig dieselbe Sprachanweisung; „Nur Hauptagent“ hält sie von jedem Unteragenten fern. Ein geforktes Teammitglied erbt weiterhin den bereits festgeschriebenen Verlaufs-Schnappschuss des Hauptagenten; dieser Schalter schreibt ihn nicht um.",
+				"sub.hint": "Teammitglieder und gewöhnliche Subagenten erhalten standardmäßig dieselbe Sprachanweisung; „Nur Hauptagent“ hält sie von jedem Unteragenten fern. Ein geforktes Teammitglied erbt weiterhin den bereits festgeschriebenen Verlaufs-Schnappschuss des Hauptagenten; dieser Schalter schreibt ihn nicht um.Externe Subagenten mit eigenem Prompt (codex / claude-code usw.) und der versiegelte minimal-Prompt laufen nie über diesen Kanal; der Schalter betrifft sie nicht.",
 			},
 			/* locale: fr */
 			"fr": {
@@ -249,7 +249,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "Équipiers et sous-agents",
 				"sub.on": "Même consigne",
 				"sub.off": "Agent principal uniquement",
-				"sub.hint": "Les équipiers d'Agent Teams et les sous-agents ordinaires reçoivent par défaut la même consigne de langue ; « Agent principal uniquement » la retire à tous les agents enfants. Un équipier issu d'un fork hérite toujours de l'instantané d'historique déjà validé de l'agent principal, que ce réglage ne réécrit pas.",
+				"sub.hint": "Les équipiers d'Agent Teams et les sous-agents ordinaires reçoivent par défaut la même consigne de langue ; « Agent principal uniquement » la retire à tous les agents enfants. Un équipier issu d'un fork hérite toujours de l'instantané d'historique déjà validé de l'agent principal, que ce réglage ne réécrit pas.Les sous-agents dotés de leur propre prompt (codex / claude-code, etc.) et le prompt scellé de minimal ne passent jamais par ce canal : ce réglage ne les concerne pas.",
 			},
 			/* locale: hi */
 			"hi": {
@@ -272,7 +272,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "टीम सदस्य और सबएजेंट",
 				"sub.on": "वही निर्देश",
 				"sub.off": "केवल मुख्य एजेंट",
-				"sub.hint": "एजेंट टीम के सदस्यों और सामान्य सबएजेंट को डिफ़ॉल्ट रूप से वही भाषा निर्देश मिलता है; 「केवल मुख्य एजेंट」 इसे हर चाइल्ड एजेंट से रोक देता है। fork से बना सदस्य मुख्य एजेंट की पहले से दर्ज इतिहास-स्नैपशॉट विरासत में लेता है, जिसे यह स्विच नहीं बदलता।",
+				"sub.hint": "एजेंट टीम के सदस्यों और सामान्य सबएजेंट को डिफ़ॉल्ट रूप से वही भाषा निर्देश मिलता है; 「केवल मुख्य एजेंट」 इसे हर चाइल्ड एजेंट से रोक देता है। fork से बना सदस्य मुख्य एजेंट की पहले से दर्ज इतिहास-स्नैपशॉट विरासत में लेता है, जिसे यह स्विच नहीं बदलता।अपना प्रॉम्प्ट लाने वाले बाहरी सबएजेंट (codex / claude-code आदि) और minimal का सीलबंद प्रॉम्प्ट इस चैनल से नहीं गुजरते, इसलिए स्विच उन्हें प्रभावित नहीं करता।",
 			},
 			/* locale: id */
 			"id": {
@@ -295,7 +295,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "Anggota tim & subagen",
 				"sub.on": "Perintah yang sama",
 				"sub.off": "Hanya agen utama",
-				"sub.hint": "Anggota Agent Team dan subagen biasa secara bawaan menerima perintah bahasa yang sama; 「Hanya agen utama」 menahannya dari setiap agen anak. Anggota hasil fork tetap mewarisi snapshot riwayat agen utama yang sudah terekam, dan sakelar ini tidak menulis ulangnya.",
+				"sub.hint": "Anggota Agent Team dan subagen biasa secara bawaan menerima perintah bahasa yang sama; 「Hanya agen utama」 menahannya dari setiap agen anak. Anggota hasil fork tetap mewarisi snapshot riwayat agen utama yang sudah terekam, dan sakelar ini tidak menulis ulangnya.Subagen eksternal yang membawa prompt sendiri (codex / claude-code, dll.) dan prompt tertutup minimal tidak melewati kanal ini, jadi sakelar tidak memengaruhinya.",
 			},
 			/* locale: it */
 			"it": {
@@ -318,7 +318,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "Compagni di squadra e subagenti",
 				"sub.on": "Stessa indicazione",
 				"sub.off": "Solo agente principale",
-				"sub.hint": "I membri dell'Agent Team e i normali subagenti ricevono per impostazione predefinita la stessa indicazione di lingua; «Solo agente principale» la esclude da ogni agente figlio. Un membro creato con fork eredita comunque l'istantanea di cronologia già confermata dell'agente principale, che questo interruttore non riscrive.",
+				"sub.hint": "I membri dell'Agent Team e i normali subagenti ricevono per impostazione predefinita la stessa indicazione di lingua; «Solo agente principale» la esclude da ogni agente figlio. Un membro creato con fork eredita comunque l'istantanea di cronologia già confermata dell'agente principale, che questo interruttore non riscrive.I subagenti con prompt proprio (codex / claude-code e simili) e il prompt sigillato di minimal non passano da questo canale: l'interruttore non li riguarda.",
 			},
 			/* locale: ja */
 			"ja": {
@@ -341,7 +341,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "チームメンバーとサブエージェント",
 				"sub.on": "同じ指示を適用",
 				"sub.off": "メインエージェントのみ",
-				"sub.hint": "エージェントチームのメンバーと通常のサブエージェントにも、既定で同じ言語指示が入ります。「メインエージェントのみ」を選ぶと子エージェントには注入されません(fork したメンバーはメインが確定済みの履歴スナップショットをそのまま継承するため、このスイッチでは書き換わりません)。",
+				"sub.hint": "エージェントチームのメンバーと通常のサブエージェントにも、既定で同じ言語指示が入ります。「メインエージェントのみ」を選ぶと子エージェントには注入されません(fork したメンバーはメインが確定済みの履歴スナップショットをそのまま継承するため、このスイッチでは書き換わりません)。独自のプロンプトを持つ外部サブエージェント(codex / claude-code など)と minimal の閉じたプロンプトはこのチャネルを通らないため、このスイッチの影響を受けません。",
 			},
 			/* locale: ko */
 			"ko": {
@@ -364,7 +364,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "팀원 및 하위 에이전트",
 				"sub.on": "동일 지시 적용",
 				"sub.off": "메인 에이전트만",
-				"sub.hint": "에이전트 팀 팀원과 일반 하위 에이전트에도 기본적으로 같은 언어 지시가 적용됩니다. 「메인 에이전트만」을 선택하면 하위 에이전트에는 주입되지 않습니다(fork된 팀원은 메인이 이미 커밋한 기록 스냅샷을 그대로 상속하므로 이 스위치로는 바뀌지 않습니다).",
+				"sub.hint": "에이전트 팀 팀원과 일반 하위 에이전트에도 기본적으로 같은 언어 지시가 적용됩니다. 「메인 에이전트만」을 선택하면 하위 에이전트에는 주입되지 않습니다(fork된 팀원은 메인이 이미 커밋한 기록 스냅샷을 그대로 상속하므로 이 스위치로는 바뀌지 않습니다).자체 프롬프트를 쓰는 외부 하위 에이전트(codex / claude-code 등)와 minimal의 닫힌 프롬프트는 이 경로를 거치지 않으므로 이 스위치의 영향을 받지 않습니다.",
 			},
 			/* locale: nl */
 			"nl": {
@@ -387,7 +387,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "Teamleden en subagenten",
 				"sub.on": "Zelfde instructie",
 				"sub.off": "Alleen hoofdagent",
-				"sub.hint": "Teamleden en gewone subagenten krijgen standaard dezelfde taalinstructie; 'Alleen hoofdagent' houdt die bij elke kindagent weg. Een geforkt teamlid erft nog steeds de al vastgelegde geschiedenis-snapshot van de hoofdagent; deze schakelaar herschrijft die niet.",
+				"sub.hint": "Teamleden en gewone subagenten krijgen standaard dezelfde taalinstructie; 'Alleen hoofdagent' houdt die bij elke kindagent weg. Een geforkt teamlid erft nog steeds de al vastgelegde geschiedenis-snapshot van de hoofdagent; deze schakelaar herschrijft die niet.Externe subagenten met een eigen prompt (codex / claude-code enz.) en de verzegelde minimal-prompt gaan nooit via dit kanaal; de schakelaar raakt hen niet.",
 			},
 			/* locale: pl */
 			"pl": {
@@ -410,7 +410,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "Członkowie zespołu i podagenci",
 				"sub.on": "Ta sama instrukcja",
 				"sub.off": "Tylko agent główny",
-				"sub.hint": "Członkowie zespołu i zwykli podagenci domyślnie otrzymują tę samą instrukcję językową; „Tylko agent główny” wstrzymuje ją dla wszystkich agentów potomnych. Rozgałęziony (fork) członek nadal dziedziczy zatwierdzony wcześniej zrzut historii agenta głównego — ten przełącznik go nie przepisuje.",
+				"sub.hint": "Członkowie zespołu i zwykli podagenci domyślnie otrzymują tę samą instrukcję językową; „Tylko agent główny” wstrzymuje ją dla wszystkich agentów potomnych. Rozgałęziony (fork) członek nadal dziedziczy zatwierdzony wcześniej zrzut historii agenta głównego — ten przełącznik go nie przepisuje.Zewnętrzni podagenci z własnym promptem (codex / claude-code itd.) oraz zapieczętowany prompt minimal nigdy nie przechodzą tym kanałem — przełącznik ich nie dotyczy.",
 			},
 			/* locale: pt */
 			"pt": {
@@ -433,7 +433,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "Membros da equipe e subagentes",
 				"sub.on": "Mesma instrução",
 				"sub.off": "Apenas o agente principal",
-				"sub.hint": "Membros do Agent Team e subagentes comuns recebem a mesma instrução de idioma por padrão; “Apenas o agente principal” a remove de todos os agentes filhos. Um membro criado por fork ainda herda o instantâneo de histórico já confirmado do agente principal, que este controle não reescreve.",
+				"sub.hint": "Membros do Agent Team e subagentes comuns recebem a mesma instrução de idioma por padrão; “Apenas o agente principal” a remove de todos os agentes filhos. Um membro criado por fork ainda herda o instantâneo de histórico já confirmado do agente principal, que este controle não reescreve.Subagentes com prompt próprio (codex / claude-code etc.) e o prompt selado do minimal nunca passam por este canal; o controle não os afeta.",
 			},
 			/* locale: ru */
 			"ru": {
@@ -456,7 +456,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "Участники команды и субагенты",
 				"sub.on": "Та же инструкция",
 				"sub.off": "Только основной агент",
-				"sub.hint": "Участники команды агентов и обычные субагенты по умолчанию получают ту же языковую инструкцию; «Только основной агент» отключает её для всех дочерних агентов. Участник, созданный через fork, всё равно наследует уже зафиксированный снимок истории основного агента — этот переключатель его не перезаписывает.",
+				"sub.hint": "Участники команды агентов и обычные субагенты по умолчанию получают ту же языковую инструкцию; «Только основной агент» отключает её для всех дочерних агентов. Участник, созданный через fork, всё равно наследует уже зафиксированный снимок истории основного агента — этот переключатель его не перезаписывает.Внешние субагенты со своим промптом (codex / claude-code и т. п.) и запечатанный промпт minimal вообще не идут через этот канал — переключатель на них не влияет.",
 			},
 			/* locale: sv */
 			"sv": {
@@ -479,7 +479,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "Teammedlemmar och subagenter",
 				"sub.on": "Samma instruktion",
 				"sub.off": "Endast huvudagenten",
-				"sub.hint": "Teammedlemmar och vanliga subagenter får samma språkinstruktion som standard; ”Endast huvudagenten” utelämnar den för alla barnagenter. En forkad teammedlem ärver ändå huvudagentens redan fastställda historikögonblicksbild, som den här växeln inte skriver om.",
+				"sub.hint": "Teammedlemmar och vanliga subagenter får samma språkinstruktion som standard; ”Endast huvudagenten” utelämnar den för alla barnagenter. En forkad teammedlem ärver ändå huvudagentens redan fastställda historikögonblicksbild, som den här växeln inte skriver om.Externa subagenter med egen prompt (codex / claude-code m.fl.) och den förseglade minimal-prompten går aldrig via den här kanalen; växeln påverkar dem inte.",
 			},
 			/* locale: th */
 			"th": {
@@ -502,7 +502,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "สมาชิกทีมและเอเจนต์ย่อย",
 				"sub.on": "ใช้คำสั่งเดียวกัน",
 				"sub.off": "เฉพาะเอเจนต์หลัก",
-				"sub.hint": "สมาชิกทีมเอเจนต์และเอเจนต์ย่อยทั่วไปจะได้รับคำสั่งภาษาชุดเดียวกันโดยค่าเริ่มต้น; 「เฉพาะเอเจนต์หลัก」จะไม่ฉีดให้เอเจนต์ลูก สมาชิกที่สร้างแบบ fork ยังคงสืบทอดสแนปช็อตประวัติที่เอเจนต์หลักยืนยันไปแล้ว ซึ่งสวิตช์นี้ไม่ได้เขียนทับ",
+				"sub.hint": "สมาชิกทีมเอเจนต์และเอเจนต์ย่อยทั่วไปจะได้รับคำสั่งภาษาชุดเดียวกันโดยค่าเริ่มต้น; 「เฉพาะเอเจนต์หลัก」จะไม่ฉีดให้เอเจนต์ลูก สมาชิกที่สร้างแบบ fork ยังคงสืบทอดสแนปช็อตประวัติที่เอเจนต์หลักยืนยันไปแล้ว ซึ่งสวิตช์นี้ไม่ได้เขียนทับเอเจนต์ย่อยภายนอกที่มีพรอมป์ของตัวเอง (codex / claude-code ฯลฯ) และพรอมป์ปิดของ minimal ไม่ได้ผ่านช่องทางนี้ สวิตช์จึงไม่มีผลกับสิ่งเหล่านั้น",
 			},
 			/* locale: tr */
 			"tr": {
@@ -525,7 +525,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "Ekip üyeleri ve alt ajanlar",
 				"sub.on": "Aynı yönerge",
 				"sub.off": "Yalnızca ana ajan",
-				"sub.hint": "Ekip üyeleri ve sıradan alt ajanlar varsayılan olarak aynı dil yönergesini alır; „Yalnızca ana ajan” bunu tüm alt ajanlardan çeker. Fork ile oluşturulan bir üye, ana ajanın önceden kesinleşmiş geçmiş anlık görüntüsünü yine devralır; bu anahtar onu yeniden yazmaz.",
+				"sub.hint": "Ekip üyeleri ve sıradan alt ajanlar varsayılan olarak aynı dil yönergesini alır; „Yalnızca ana ajan” bunu tüm alt ajanlardan çeker. Fork ile oluşturulan bir üye, ana ajanın önceden kesinleşmiş geçmiş anlık görüntüsünü yine devralır; bu anahtar onu yeniden yazmaz.Kendi prompt'unu getiren dış alt ajanlar (codex / claude-code vb.) ve minimal'ın kapalı promptu bu kanaldan hiç geçmez; anahtar onları etkilemez.",
 			},
 			/* locale: vi */
 			"vi": {
@@ -548,7 +548,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "Thành viên nhóm và tác nhân con",
 				"sub.on": "Cùng chỉ dẫn",
 				"sub.off": "Chỉ tác nhân chính",
-				"sub.hint": "Thành viên Agent Team và tác nhân con thông thường mặc định nhận cùng chỉ dẫn ngôn ngữ; 「Chỉ tác nhân chính」 sẽ không chèn cho mọi tác nhân con. Thành viên tạo bằng fork vẫn kế thừa ảnh chụp lịch sử đã chốt của tác nhân chính — công tắc này không ghi đè ảnh chụp đó.",
+				"sub.hint": "Thành viên Agent Team và tác nhân con thông thường mặc định nhận cùng chỉ dẫn ngôn ngữ; 「Chỉ tác nhân chính」 sẽ không chèn cho mọi tác nhân con. Thành viên tạo bằng fork vẫn kế thừa ảnh chụp lịch sử đã chốt của tác nhân chính — công tắc này không ghi đè ảnh chụp đó.Các tác nhân con bên ngoài có prompt riêng (codex / claude-code, v.v.) và prompt đóng của minimal không đi qua kênh này, nên công tắc không ảnh hưởng đến chúng.",
 			},
 			/* locale: zh-hk */
 			"zh-hk": {
@@ -571,7 +571,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "隊員與子代理",
 				"sub.on": "同樣生效",
 				"sub.off": "僅主代理",
-				"sub.hint": "智能體團隊的隊員與一般子代理預設同樣帶上這段語言指示;選「僅主代理」後只對主代理注入(fork 出的隊員仍會繼承主代理已提交的歷史快照,不受此開關影響)。",
+				"sub.hint": "智能體團隊的隊員與一般子代理預設同樣帶上這段語言指示;選「僅主代理」後只對主代理注入(fork 出的隊員仍會繼承主代理已提交的歷史快照,不受此開關影響)。自帶提示詞的外部子代理(codex / claude-code 等)與極簡模式的封閉提示本就不經這條通道,開關對它們無影響。",
 			},
 			/* locale: zh-mo */
 			"zh-mo": {
@@ -594,7 +594,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "隊員與子代理",
 				"sub.on": "同樣生效",
 				"sub.off": "僅主代理",
-				"sub.hint": "智能體團隊的隊員與一般子代理預設同樣帶上這段語言指示;選「僅主代理」後只對主代理注入(fork 出的隊員仍會繼承主代理已提交的歷史快照,不受此開關影響)。",
+				"sub.hint": "智能體團隊的隊員與一般子代理預設同樣帶上這段語言指示;選「僅主代理」後只對主代理注入(fork 出的隊員仍會繼承主代理已提交的歷史快照,不受此開關影響)。自帶提示詞的外部子代理(codex / claude-code 等)與極簡模式的封閉提示本就不經這條通道,開關對它們無影響。",
 			},
 			/* locale: zh-tw */
 			"zh-tw": {
@@ -617,7 +617,7 @@ window.__ModuleLoader__.load({
 				"sub.title": "隊員與子代理",
 				"sub.on": "同樣生效",
 				"sub.off": "僅主代理",
-				"sub.hint": "代理團隊的隊員與一般子代理預設同樣帶上這段語言指示;選「僅主代理」後只對主代理注入(fork 出的隊員仍會繼承主代理已提交的歷史快照,不受此開關影響)。",
+				"sub.hint": "代理團隊的隊員與一般子代理預設同樣帶上這段語言指示;選「僅主代理」後只對主代理注入(fork 出的隊員仍會繼承主代理已提交的歷史快照,不受此開關影響)。自帶提示詞的外部子代理(codex / claude-code 等)與極簡模式的封閉提示本就不經這條通道,開關對它們無影響。",
 			},
 		};
 

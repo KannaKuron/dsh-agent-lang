@@ -523,6 +523,11 @@ test('client bundle: the audience copy explains the fork boundary in every dicti
     // translations escape inner quotes, which would truncate a regex match.
     const line = block.slice(at, block.indexOf('\n', at))
     assert.match(line, /fork/i, 'sub.hint must name the fork boundary: ' + line.slice(0, 60))
+    // Both user-visible boundaries must ride the card copy (the user asked for
+    // the switch, and the lead asked for the boundaries to be stated there):
+    // the fork boundary above, and the "own prompt / sealed prompt never passes
+    // through this channel" clause — every translation names codex with it.
+    assert.match(line, /codex/i, 'sub.hint must state the external/sealed-prompt boundary: ' + line.slice(0, 60))
   }
 })
 

@@ -18,7 +18,7 @@
 - **已知边界(卡片文案里对用户说明)**:
   - **fork 出的队员继承主代理已完成回合的前缀**,那段历史里含主代理**已提交**的 runtime-context 快照(其中有语言指示)。关掉开关后,fork 队员**自己新提交**的快照没有指示,但继承段仍在——本插件不重写历史(不变量 1),这是 DSH 的历史模型决定的,不是开关失效。证据见下。
   - **外部 provider 的子代理**(codex / claude-code / acp / sdk 等自带 prompt 的运行时)本来就不经过宿主 `systemPrompt`,开关对它无影响(保持原状;`minimal` 的封闭 prompt 同理,见不变量 2)。
-- **卡片 / 词典**:卡片新增一行「队员与子代理」两段式开关(与现有模式行同构,复用同一套 `.dl-segBtn` chrome 与焦点环令牌),下方一行说明;`subagents` 缺省读作开(谁没动过就不该被静默缩小覆盖)。21 门语言各新增 4 键——`sub.title` / `sub.on` / `sub.off` / `sub.hint`,键集合与 `zh` 完全相等(冒烟强制),说明文案统一点出 fork 边界。
+- **卡片 / 词典**:卡片新增一行「队员与子代理」两段式开关(与现有模式行同构,复用同一套 `.dl-segBtn` chrome 与焦点环令牌),下方一行说明;`subagents` 缺省读作开(谁没动过就不该被静默缩小覆盖)。21 门语言各新增 4 键——`sub.title` / `sub.on` / `sub.off` / `sub.hint`,键集合与 `zh` 完全相等(冒烟强制)。**`sub.hint` 在 21 门语言里都写明两条边界**:① fork 出的队员继承主代理已提交的历史快照、开关不重写历史;② 自带提示词的外部子代理(codex / claude-code 等)与 `minimal` 的封闭提示本就不经这条通道、开关对它们无影响(冒烟逐门断言 `fork` 与 `codex` 两个关键词都在)。
 - **真机证据**(请求级;隔离 `DSH_HOME=/tmp/dsh-lang-v080`,headless profile 挂 `base + headless + experimental-agent-team-profile + dsh-agent-lang`,`llm-deepseek.baseURL` 指向本地 Anthropic-Messages stub,由 stub 主动回 `spawn_teammate` 工具调用——不需要真模型即可跑出真实队员):
 
   | 场景 | 主代理(Lead)请求 | 队员 / 子代理请求 |
@@ -27,7 +27,7 @@
   | `subagents: false`,fresh 队员(`spawn`) | ✅ 含指示 | **❌ 0 条指示**(同一 profile、同一链路) |
   | `subagents: false`,fork 队员 | ✅ 含指示 | 自有快照 ❌;继承的 lead 前缀快照 ✅(`msg#0` 继承段含指示、`msg#2` 队员自有 runtime-context 不含) |
 
-  - GUI(隔离 web profile + 无头 Chrome over CDP,端口 3124,未碰 3080 与用户 profile):插件面板卡片渲染出「队员与子代理: 同样生效」两段、默认选中「同样生效」,说明行显示 fork 边界;点「仅主代理」→ profile 用户层 `cordis.patch.yml` 落 `subagents: false`,点回「同样生效」→ 落 `true`,active 段随之切换;`uiLocale: zh` 未被覆盖(逐字段深合并生效);console 无本插件相关错误。
+  - GUI(隔离 web profile + 无头 Chrome over CDP,端口 3124,未碰 3080 与用户 profile):插件面板卡片渲染出「队员与子代理: 同样生效」两段、默认选中「同样生效」,说明行同时给出两条边界文案(实测渲染文本:`…fork 出的队员仍继承主代理已提交的历史快照,不受此开关影响)。自带提示词的外部子代理(codex / claude-code 等)与极简模式的封闭提示本就不经这条通道,开关对它们无影响。`);点「仅主代理」→ profile 用户层 `cordis.patch.yml` 落 `subagents: false`,点回「同样生效」→ 落 `true`,active 段随之切换;`uiLocale: zh` 未被覆盖(逐字段深合并生效);console 无本插件相关错误。
   - 冒烟测试 **39 → 46 项全绿**(+7):`subagentsEnabled`(默认开 + 只认显式 false)、`isSubagentHeader`(三个标记 + 畸形值不误判)、`directiveText`(开关只掐子代理;开时两个受众逐字节一致)、「子代理影子注册形态」(同名同序 + `agent/created`/`agent/disposed`/`agents.list()`)、「开关在两代设置面都声明」、卡片开关渲染与写入、21 门词典 `sub.hint` 均点出 fork 边界;另两条旧断言随重构更新(`sctx.get('settings')` 形态、两个 provider 均为函数)。
 - 其余契约复核(rc.2):`systemPrompt.context()` / `CONTEXT_ORDERS`(125 仍空闲)/ `agent/created`、`agent/disposed` 事件形态(`packages/core/agent/src/runtime-types.ts:261-270`)/ `agent.ctx` 作用域语义均未变;`dsh.bundle.patch`、peer 门禁、展示元数据不受影响(逐面表见 v0.7.1)。
 - 版本 0.7.1 → **0.8.0**(minor:新增设置项与覆盖语义),`dsh.plugin.json` 同步。
