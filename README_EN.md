@@ -20,6 +20,7 @@ This plugin changes only the PROMPT side: one global dynamic runtime-context dir
 | `ptc` (PTC mode, formerly `code`) | ✅ | `run_code`'s `description` included |
 | `cordis` (Creation mode) | ✅ | |
 | User presets (incl. `ptc-cordis`, dsh-gitbash-shell variants) | ✅ | Host-plane registration covers every unsealed preset in the process |
+| Agent-Team teammates / ordinary subagents (v0.8.0) | ✅ **on by default** | Teammate and subagent requests carry the same directive; Settings can switch to "main agent only". A **forked** teammate still inherits the main agent's completed-turn history snapshot (which carries the directive already committed there) — no switch rewrites history |
 | `minimal` | ❌ (by design) | minimal mounts a complete persona and suppresses runtime context — its prompt is sealed against every late contributor; no prompt-level plugin can reach it |
 
 ## How it works

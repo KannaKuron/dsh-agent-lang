@@ -148,6 +148,10 @@ window.__ModuleLoader__.load({
 			"none": "—",
 			"error": "写入失败",
 			"hint": "三个通道独立配置:跟随界面 / 强制指定 / 关闭(思考与回复默认关闭以保持现状)。检测优先级:设置 → 通用 → 语言的显式选择 > 浏览器上报。切换后下一轮请求即生效;minimal 模式提示词封闭,不在范围内。",
+			"sub.title": "队员与子代理",
+			"sub.on": "同样生效",
+			"sub.off": "仅主代理",
+			"sub.hint": "智能体团队的队员与普通子代理默认同样带上这段语言指示;选「仅主代理」后只对主代理注入(fork 出的队员仍继承主代理已提交的历史快照,不受此开关影响)。",
 		};
 
 		var en = {
@@ -167,6 +171,10 @@ window.__ModuleLoader__.load({
 			"none": "—",
 			"error": "Write failed",
 			"hint": "Three independent channels: follow GUI / force a tag / off (thinking and replies default to off, preserving current behavior). Detection order: the explicit Settings → General → Language choice over the browser report. Changes apply on the next request; the minimal preset seals its prompt and is out of scope.",
+			"sub.title": "Teammates & subagents",
+			"sub.on": "Same directive",
+			"sub.off": "Main agent only",
+			"sub.hint": "Agent-team teammates and ordinary subagents carry the same language directive by default; \"Main agent only\" withholds it from every child agent. A forked teammate still inherits the main agent's already-committed history snapshot, which this switch does not rewrite.",
 		};
 
 		/* Third-language dictionaries, keyed by lowercase BCP-47 tag — the registry
@@ -192,6 +200,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "فشل الكتابة",
 				"hint": "ثلاث قنوات مستقلة: اتّباع الواجهة / فرض لغة / إيقاف (تفكير النموذج والردود متوقفة افتراضيًا للحفاظ على السلوك الحالي). ترتيب الكشف: الاختيار الصريح في الإعدادات ← عام ← اللغة يتقدّم على ما يبلّغ عنه المتصفح. يسري التغيير في الطلب التالي؛ أما نمط minimal فنصّه التوجيهي مغلق وهو خارج النطاق.",
+				"sub.title": "أعضاء الفريق والوكلاء الفرعيون",
+				"sub.on": "التعليمة نفسها",
+				"sub.off": "الوكيل الرئيسي فقط",
+				"sub.hint": "يحصل أعضاء فريق الوكلاء والوكلاء الفرعيون العاديون افتراضيًا على تعليمة اللغة نفسها؛ و«الوكيل الرئيسي فقط» يمنعها عن كل الوكلاء الأبناء. العضو المنشأ عبر fork يرث مع ذلك لقطة السجل المثبَّتة مسبقًا للوكيل الرئيسي، وهذا المفتاح لا يعيد كتابتها.",
 			},
 			/* locale: de */
 			"de": {
@@ -211,6 +223,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "Schreiben fehlgeschlagen",
 				"hint": "Drei unabhängige Kanäle: GUI-Sprache folgen / Sprache erzwingen / aus (Denken und Antworten sind standardmäßig aus, um das bisherige Verhalten zu erhalten). Erkennungsreihenfolge: die ausdrückliche Wahl unter Einstellungen → Allgemein → Sprache hat Vorrang vor der Browser-Meldung. Änderungen greifen ab der nächsten Anfrage; das Preset minimal versiegelt seinen Prompt und bleibt außen vor.",
+				"sub.title": "Teammitglieder & Subagenten",
+				"sub.on": "Gleiche Anweisung",
+				"sub.off": "Nur Hauptagent",
+				"sub.hint": "Teammitglieder und gewöhnliche Subagenten erhalten standardmäßig dieselbe Sprachanweisung; „Nur Hauptagent“ hält sie von jedem Unteragenten fern. Ein geforktes Teammitglied erbt weiterhin den bereits festgeschriebenen Verlaufs-Schnappschuss des Hauptagenten; dieser Schalter schreibt ihn nicht um.",
 			},
 			/* locale: fr */
 			"fr": {
@@ -230,6 +246,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "Échec de l'écriture",
 				"hint": "Trois canaux indépendants : suivre l'interface / forcer une langue / désactivé (réflexion et réponses désactivées par défaut pour ne rien changer). Ordre de détection : le choix explicite dans Paramètres → Général → Langue prime sur le signalement du navigateur. Le changement s'applique dès la requête suivante ; le preset minimal scelle son prompt et reste hors périmètre.",
+				"sub.title": "Équipiers et sous-agents",
+				"sub.on": "Même consigne",
+				"sub.off": "Agent principal uniquement",
+				"sub.hint": "Les équipiers d'Agent Teams et les sous-agents ordinaires reçoivent par défaut la même consigne de langue ; « Agent principal uniquement » la retire à tous les agents enfants. Un équipier issu d'un fork hérite toujours de l'instantané d'historique déjà validé de l'agent principal, que ce réglage ne réécrit pas.",
 			},
 			/* locale: hi */
 			"hi": {
@@ -249,6 +269,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "लिखने में विफल",
 				"hint": "तीन स्वतंत्र चैनल: इंटरफ़ेस का पालन / भाषा बाध्य / बंद (सोच और उत्तर मौजूदा व्यवहार बनाए रखने के लिए डिफ़ॉल्ट रूप से बंद हैं)। पहचान का क्रम: सेटिंग्स → सामान्य → भाषा में स्पष्ट चयन ब्राउज़र रिपोर्ट से पहले। बदलाव अगले अनुरोध से लागू होता है; minimal प्रीसेट अपना प्रॉम्प्ट सील करता है और दायरे से बाहर है।",
+				"sub.title": "टीम सदस्य और सबएजेंट",
+				"sub.on": "वही निर्देश",
+				"sub.off": "केवल मुख्य एजेंट",
+				"sub.hint": "एजेंट टीम के सदस्यों और सामान्य सबएजेंट को डिफ़ॉल्ट रूप से वही भाषा निर्देश मिलता है; 「केवल मुख्य एजेंट」 इसे हर चाइल्ड एजेंट से रोक देता है। fork से बना सदस्य मुख्य एजेंट की पहले से दर्ज इतिहास-स्नैपशॉट विरासत में लेता है, जिसे यह स्विच नहीं बदलता।",
 			},
 			/* locale: id */
 			"id": {
@@ -268,6 +292,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "Gagal menulis",
 				"hint": "Tiga kanal independen: ikuti antarmuka / paksa bahasa / nonaktif (penalaran dan balasan nonaktif secara bawaan agar perilaku sekarang tetap). Urutan deteksi: pilihan eksplisit di Pengaturan → Umum → Bahasa mengalahkan laporan peramban. Perubahan berlaku pada permintaan berikutnya; preset minimal menyegel prompt-nya dan di luar cakupan.",
+				"sub.title": "Anggota tim & subagen",
+				"sub.on": "Perintah yang sama",
+				"sub.off": "Hanya agen utama",
+				"sub.hint": "Anggota Agent Team dan subagen biasa secara bawaan menerima perintah bahasa yang sama; 「Hanya agen utama」 menahannya dari setiap agen anak. Anggota hasil fork tetap mewarisi snapshot riwayat agen utama yang sudah terekam, dan sakelar ini tidak menulis ulangnya.",
 			},
 			/* locale: it */
 			"it": {
@@ -287,6 +315,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "Scrittura non riuscita",
 				"hint": "Tre canali indipendenti: segui l'interfaccia / forza una lingua / disattivato (ragionamento e risposte disattivati per impostazione predefinita, per non cambiare il comportamento attuale). Ordine di rilevamento: la scelta esplicita in Impostazioni → Generali → Lingua prevale sulla segnalazione del browser. Le modifiche valgono dalla richiesta successiva; il preset minimal sigilla il proprio prompt e resta fuori ambito.",
+				"sub.title": "Compagni di squadra e subagenti",
+				"sub.on": "Stessa indicazione",
+				"sub.off": "Solo agente principale",
+				"sub.hint": "I membri dell'Agent Team e i normali subagenti ricevono per impostazione predefinita la stessa indicazione di lingua; «Solo agente principale» la esclude da ogni agente figlio. Un membro creato con fork eredita comunque l'istantanea di cronologia già confermata dell'agente principale, che questo interruttore non riscrive.",
 			},
 			/* locale: ja */
 			"ja": {
@@ -306,6 +338,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "書き込み失敗",
 				"hint": "3つのチャネルを独立に設定:GUI言語に従う / 指定 / オフ(思考と回答は現状維持のためデフォルトはオフ)。検出順序:設定 → 全般 → 言語の明示的な選択がブラウザー報告に優先。切り替えは次のリクエストから反映;minimal プリセットはプロンプトが封鎖されているため対象外です。",
+				"sub.title": "チームメンバーとサブエージェント",
+				"sub.on": "同じ指示を適用",
+				"sub.off": "メインエージェントのみ",
+				"sub.hint": "エージェントチームのメンバーと通常のサブエージェントにも、既定で同じ言語指示が入ります。「メインエージェントのみ」を選ぶと子エージェントには注入されません(fork したメンバーはメインが確定済みの履歴スナップショットをそのまま継承するため、このスイッチでは書き換わりません)。",
 			},
 			/* locale: ko */
 			"ko": {
@@ -325,6 +361,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "쓰기 실패",
 				"hint": "세 채널을 독립 설정:GUI 언어 따르기 / 지정 / 끄기(사고와 응답은 현상 유지를 위해 기본 꺼짐). 감지 순서: 설정 → 일반 → 언어의 명시적 선택이 브라우저 보고에 우선. 전환은 다음 요청부터 적용;minimal 프리셋은 프롬프트가 폐쇄되어 있어 대상에서 제외됩니다.",
+				"sub.title": "팀원 및 하위 에이전트",
+				"sub.on": "동일 지시 적용",
+				"sub.off": "메인 에이전트만",
+				"sub.hint": "에이전트 팀 팀원과 일반 하위 에이전트에도 기본적으로 같은 언어 지시가 적용됩니다. 「메인 에이전트만」을 선택하면 하위 에이전트에는 주입되지 않습니다(fork된 팀원은 메인이 이미 커밋한 기록 스냅샷을 그대로 상속하므로 이 스위치로는 바뀌지 않습니다).",
 			},
 			/* locale: nl */
 			"nl": {
@@ -344,6 +384,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "Schrijven mislukt",
 				"hint": "Drie onafhankelijke kanalen: interfacetaal volgen / taal forceren / uit (denkwijze en antwoorden staan standaard uit om het huidige gedrag te bewaren). Detectievolgorde: de expliciete keuze bij Instellingen → Algemeen → Taal gaat vóór de browsermelding. Wijzigingen gelden vanaf het volgende verzoek; de preset minimal verzegelt zijn prompt en valt buiten bereik.",
+				"sub.title": "Teamleden en subagenten",
+				"sub.on": "Zelfde instructie",
+				"sub.off": "Alleen hoofdagent",
+				"sub.hint": "Teamleden en gewone subagenten krijgen standaard dezelfde taalinstructie; 'Alleen hoofdagent' houdt die bij elke kindagent weg. Een geforkt teamlid erft nog steeds de al vastgelegde geschiedenis-snapshot van de hoofdagent; deze schakelaar herschrijft die niet.",
 			},
 			/* locale: pl */
 			"pl": {
@@ -363,6 +407,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "Zapis nie powiódł się",
 				"hint": "Trzy niezależne kanały: zgodnie z interfejsem / wymuszony język / wyłączone (rozumowanie i odpowiedzi są domyślnie wyłączone, aby zachować dotychczasowe działanie). Kolejność wykrywania: jawny wybór w Ustawienia → Ogólne → Język ma pierwszeństwo przed zgłoszeniem przeglądarki. Zmiany działają od następnego żądania; preset minimal zamyka swój prompt i pozostaje poza zakresem.",
+				"sub.title": "Członkowie zespołu i podagenci",
+				"sub.on": "Ta sama instrukcja",
+				"sub.off": "Tylko agent główny",
+				"sub.hint": "Członkowie zespołu i zwykli podagenci domyślnie otrzymują tę samą instrukcję językową; „Tylko agent główny” wstrzymuje ją dla wszystkich agentów potomnych. Rozgałęziony (fork) członek nadal dziedziczy zatwierdzony wcześniej zrzut historii agenta głównego — ten przełącznik go nie przepisuje.",
 			},
 			/* locale: pt */
 			"pt": {
@@ -382,6 +430,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "Falha ao gravar",
 				"hint": "Três canais independentes: seguir a interface / forçar um idioma / desativado (raciocínio e respostas desativados por padrão para preservar o comportamento atual). Ordem de detecção: a escolha explícita em Configurações → Geral → Idioma tem prioridade sobre o relato do navegador. As mudanças valem na próxima requisição; o preset minimal sela o próprio prompt e fica fora do escopo.",
+				"sub.title": "Membros da equipe e subagentes",
+				"sub.on": "Mesma instrução",
+				"sub.off": "Apenas o agente principal",
+				"sub.hint": "Membros do Agent Team e subagentes comuns recebem a mesma instrução de idioma por padrão; “Apenas o agente principal” a remove de todos os agentes filhos. Um membro criado por fork ainda herda o instantâneo de histórico já confirmado do agente principal, que este controle não reescreve.",
 			},
 			/* locale: ru */
 			"ru": {
@@ -401,6 +453,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "Не удалось записать",
 				"hint": "Три независимых канала: следовать интерфейсу / задать язык принудительно / выключено (рассуждения и ответы по умолчанию выключены, чтобы сохранить текущее поведение). Порядок определения: явный выбор в разделе «Настройки → Общие → Язык» важнее сообщения браузера. Изменения вступают в силу со следующего запроса; пресет minimal изолирует свой промпт и не входит в область действия.",
+				"sub.title": "Участники команды и субагенты",
+				"sub.on": "Та же инструкция",
+				"sub.off": "Только основной агент",
+				"sub.hint": "Участники команды агентов и обычные субагенты по умолчанию получают ту же языковую инструкцию; «Только основной агент» отключает её для всех дочерних агентов. Участник, созданный через fork, всё равно наследует уже зафиксированный снимок истории основного агента — этот переключатель его не перезаписывает.",
 			},
 			/* locale: sv */
 			"sv": {
@@ -420,6 +476,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "Skrivning misslyckades",
 				"hint": "Tre oberoende kanaler: följ gränssnittet / tvinga ett språk / av (resonemang och svar är av som standard för att behålla nuvarande beteende). Identifieringsordning: det uttryckliga valet under Inställningar → Allmänt → Språk går före webbläsarens rapport. Ändringar gäller från nästa begäran; förinställningen minimal förseglar sin prompt och omfattas inte.",
+				"sub.title": "Teammedlemmar och subagenter",
+				"sub.on": "Samma instruktion",
+				"sub.off": "Endast huvudagenten",
+				"sub.hint": "Teammedlemmar och vanliga subagenter får samma språkinstruktion som standard; ”Endast huvudagenten” utelämnar den för alla barnagenter. En forkad teammedlem ärver ändå huvudagentens redan fastställda historikögonblicksbild, som den här växeln inte skriver om.",
 			},
 			/* locale: th */
 			"th": {
@@ -439,6 +499,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "เขียนไม่สำเร็จ",
 				"hint": "สามช่องทางอิสระ: ตามอินเทอร์เฟซ / บังคับภาษา / ปิด (การคิดและคำตอบปิดโดยค่าเริ่มต้นเพื่อคงพฤติกรรมเดิม) ลำดับการตรวจหา: ตัวเลือกที่ระบุใน การตั้งค่า → ทั่วไป → ภาษา มาก่อนรายงานจากเบราว์เซอร์ การเปลี่ยนแปลงมีผลกับคำขอถัดไป; พรีเซ็ต minimal ปิดผนึกพรอมป์ของตนจึงไม่อยู่ในขอบเขต",
+				"sub.title": "สมาชิกทีมและเอเจนต์ย่อย",
+				"sub.on": "ใช้คำสั่งเดียวกัน",
+				"sub.off": "เฉพาะเอเจนต์หลัก",
+				"sub.hint": "สมาชิกทีมเอเจนต์และเอเจนต์ย่อยทั่วไปจะได้รับคำสั่งภาษาชุดเดียวกันโดยค่าเริ่มต้น; 「เฉพาะเอเจนต์หลัก」จะไม่ฉีดให้เอเจนต์ลูก สมาชิกที่สร้างแบบ fork ยังคงสืบทอดสแนปช็อตประวัติที่เอเจนต์หลักยืนยันไปแล้ว ซึ่งสวิตช์นี้ไม่ได้เขียนทับ",
 			},
 			/* locale: tr */
 			"tr": {
@@ -458,6 +522,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "Yazma başarısız",
 				"hint": "Üç bağımsız kanal: arayüzü izle / dil zorla / kapalı (düşünme ve yanıtlar mevcut davranışı korumak için varsayılan olarak kapalıdır). Algılama sırası: Ayarlar → Genel → Dil altındaki açık seçim, tarayıcı bildiriminden önce gelir. Değişiklikler bir sonraki istekte geçerli olur; minimal ön ayarı istemini mühürler ve kapsam dışıdır.",
+				"sub.title": "Ekip üyeleri ve alt ajanlar",
+				"sub.on": "Aynı yönerge",
+				"sub.off": "Yalnızca ana ajan",
+				"sub.hint": "Ekip üyeleri ve sıradan alt ajanlar varsayılan olarak aynı dil yönergesini alır; „Yalnızca ana ajan” bunu tüm alt ajanlardan çeker. Fork ile oluşturulan bir üye, ana ajanın önceden kesinleşmiş geçmiş anlık görüntüsünü yine devralır; bu anahtar onu yeniden yazmaz.",
 			},
 			/* locale: vi */
 			"vi": {
@@ -477,6 +545,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "Ghi thất bại",
 				"hint": "Ba kênh độc lập: theo giao diện / buộc ngôn ngữ / tắt (suy nghĩ và câu trả lời mặc định tắt để giữ nguyên hành vi hiện tại). Thứ tự phát hiện: lựa chọn rõ ràng trong Cài đặt → Chung → Ngôn ngữ được ưu tiên hơn báo cáo của trình duyệt. Thay đổi có hiệu lực từ yêu cầu kế tiếp; preset minimal niêm phong prompt của nó và nằm ngoài phạm vi.",
+				"sub.title": "Thành viên nhóm và tác nhân con",
+				"sub.on": "Cùng chỉ dẫn",
+				"sub.off": "Chỉ tác nhân chính",
+				"sub.hint": "Thành viên Agent Team và tác nhân con thông thường mặc định nhận cùng chỉ dẫn ngôn ngữ; 「Chỉ tác nhân chính」 sẽ không chèn cho mọi tác nhân con. Thành viên tạo bằng fork vẫn kế thừa ảnh chụp lịch sử đã chốt của tác nhân chính — công tắc này không ghi đè ảnh chụp đó.",
 			},
 			/* locale: zh-hk */
 			"zh-hk": {
@@ -496,6 +568,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "寫入失敗",
 				"hint": "三個通道獨立設定:跟隨介面 / 強制指定 / 關閉(思考與回覆預設關閉以維持現狀)。偵測優先次序:設定 → 一般 → 語言的明確選擇 > 瀏覽器上報。切換後下一輪請求即時生效;minimal 模式提示詞封閉,不在範圍之內。",
+				"sub.title": "隊員與子代理",
+				"sub.on": "同樣生效",
+				"sub.off": "僅主代理",
+				"sub.hint": "智能體團隊的隊員與一般子代理預設同樣帶上這段語言指示;選「僅主代理」後只對主代理注入(fork 出的隊員仍會繼承主代理已提交的歷史快照,不受此開關影響)。",
 			},
 			/* locale: zh-mo */
 			"zh-mo": {
@@ -515,6 +591,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "寫入失敗",
 				"hint": "三個通道獨立設定:跟隨介面 / 強制指定 / 關閉(思考與回覆預設關閉以維持現狀)。偵測優先次序:設定 → 一般 → 語言的明確選擇 > 瀏覽器上報。切換後下一輪請求即時生效;minimal 模式提示詞封閉,不在範圍之內。",
+				"sub.title": "隊員與子代理",
+				"sub.on": "同樣生效",
+				"sub.off": "僅主代理",
+				"sub.hint": "智能體團隊的隊員與一般子代理預設同樣帶上這段語言指示;選「僅主代理」後只對主代理注入(fork 出的隊員仍會繼承主代理已提交的歷史快照,不受此開關影響)。",
 			},
 			/* locale: zh-tw */
 			"zh-tw": {
@@ -534,6 +614,10 @@ window.__ModuleLoader__.load({
 				"none": "—",
 				"error": "寫入失敗",
 				"hint": "三個通道獨立設定:跟隨介面 / 強制指定 / 關閉(思考與回覆預設關閉以維持現狀)。偵測優先順序:設定 → 一般 → 語言的明確選擇優先於瀏覽器回報。切換後下一輪請求即生效;minimal 模式的提示詞是封閉的,不在範圍內。",
+				"sub.title": "隊員與子代理",
+				"sub.on": "同樣生效",
+				"sub.off": "僅主代理",
+				"sub.hint": "代理團隊的隊員與一般子代理預設同樣帶上這段語言指示;選「僅主代理」後只對主代理注入(fork 出的隊員仍會繼承主代理已提交的歷史快照,不受此開關影響)。",
 			},
 		};
 
@@ -855,6 +939,12 @@ window.__ModuleLoader__.load({
 			// shell is only for the legacy Settings slot, which passes no view.
 			var pageView = props.view === "page";
 
+			// Audience (v0.8.0): teammates / subagents carry the same directive
+			// by default. An absent field means "never touched" ⇒ true; only an
+			// explicit false (or the string a hand-edited patch may carry) turns
+			// it off, mirroring the host half's subagentsEnabled().
+			var subOn = !(value.subagents === false || value.subagents === "false");
+
 			var bodyContent = E("div", { className: "dl-body" },
 					E("div", { className: "dl-seg" },
 						E("button", {
@@ -877,6 +967,24 @@ window.__ModuleLoader__.load({
 						E("span", { className: "dl-rowValue" }, reported || t("none")),
 					),
 					channels.map(channelBlock),
+					// ── audience: two segments rather than a checkbox, matching
+					// the mode rows above (and reusing their focus/chrome rules).
+					E("div", { className: "dl-force" },
+						E("span", { className: "dl-chanLabel" }, t("sub.title") + ": " + (subOn ? t("sub.on") : t("sub.off"))),
+						E("div", { className: "dl-seg" },
+							E("button", {
+								type: "button",
+								className: "dl-segBtn" + (subOn ? " dl-segActive" : ""),
+								onClick: function () { write({ subagents: true }); },
+							}, t("sub.on")),
+							E("button", {
+								type: "button",
+								className: "dl-segBtn" + (subOn ? "" : " dl-segActive"),
+								onClick: function () { write({ subagents: false }); },
+							}, t("sub.off")),
+						),
+					),
+					E("p", { className: "dl-hint" }, t("sub.hint")),
 					error ? E("p", { className: "dl-error" }, error) : null,
 					E("p", { className: "dl-hint" }, t("hint")),
 				);

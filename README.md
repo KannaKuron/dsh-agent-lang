@@ -20,6 +20,7 @@ DSH 里每一次工具调用的 `description` 参数都是必填的,而且**原�
 | `ptc`(PTC 模式,旧名 `code`) | ✅ | `run_code` 的 `description` 同样覆盖 |
 | `cordis`(创造模式) | ✅ | |
 | 用户自建 preset(含 `ptc-cordis`、dsh-gitbash-shell 的 gitbash 变体等) | ✅ | 挂在主机面,对进程内所有未封闭提示的 preset 生效 |
+| 智能体团队队员 / 普通子代理(v0.8.0) | ✅ **默认生效** | 队员与子代理的请求同样带上指示;设置里可切「仅主代理」。**fork 出的队员**会继承主代理已完成回合的历史快照(含已提交的指示),开关不重写历史 |
 | `minimal`(极简模式) | ❌(设计如此) | minimal 的 persona 是 `complete: true` 且压制 runtime context,提示词对一切后挂贡献者封闭——任何提示级插件都无法进入,需要产品侧改动 |
 
 ## 工作原理

@@ -20,6 +20,9 @@ const {
   languageSelfName,
   buildLanguageDirective,
   buildChannelDirectives,
+  subagentsEnabled,
+  isSubagentHeader,
+  directiveText,
 } = _internal
 
 const hostSource = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8')
@@ -202,10 +205,14 @@ test('host half: registers a runtime CONTEXT, never a prompt section', () => {
 test('host half: the directive reads settings via ctx.get, never as an undeclared ctx property', () => {
   // The context callback's ctx declares ONLY 'systemPrompt'; touching
   // ctx.settings there silently reads undefined and the directive stays
-  // empty forever (live regression, 2026-08-31).
-  assert.match(hostSource, /pctx\.get\('settings'\)/)
-  // ban the ACCESS form only (the word may appear in explanatory comments)
-  assert.doesNotMatch(hostSource, /pctx\.settings\??\./)
+  // empty forever (live regression, 2026-08-31). v0.8.0 shares one provider
+  // (`textFor`) between the global entry and the per-child entry, so its
+  // parameter is named `sctx` — what matters is the `.get('settings')` form,
+  // and the ACCESS form stays banned in every spelling.
+  assert.match(hostSource, /sctx\.get\('settings'\)/)
+  for (const banned of ['pctx.settings?.', 'sctx.settings?.', 'pctx.settings.', 'sctx.settings.']) {
+    assert.ok(!hostSource.includes(banned), `host half must not read settings as ${banned}`)
+  }
 })
 
 test('host half: lazy Config (dsh >= 0.1.7 settings) with volatile probing', () => {
@@ -240,7 +247,87 @@ test('host half: reads the locale namespace but never writes it', () => {
 })
 
 test('host half: directive text provider is a function re-evaluated per assembly', () => {
-  assert.match(hostSource, /text: \(\) => \{/)
+  // Both registrations (the global one and the per-child shadow) must pass a
+  // FUNCTION, never a captured string: a language switch, a mode flip, and
+  // the audience switch all land on the next request through this call.
+  const providers = [...hostSource.matchAll(/text: \(\) => textFor\((\w+), (true|false)\)/g)]
+  assert.equal(providers.length, 2, 'expected one provider per registration (global + child)')
+  assert.deepEqual(providers.map(m => m[2]).sort(), ['false', 'true'])
+})
+
+// ── teammate / subagent audience (v0.8.0) ────────────────────────────────────
+
+test('subagentsEnabled: defaults ON, and only an explicit false narrows the audience', () => {
+  // The user's requirement: teammates and subagents carry the directive by
+  // default. An unreadable / absent value must never silently narrow coverage.
+  assert.equal(subagentsEnabled(undefined), true)
+  assert.equal(subagentsEnabled(null), true)
+  assert.equal(subagentsEnabled(true), true)
+  assert.equal(subagentsEnabled(''), true)
+  assert.equal(subagentsEnabled('true'), true)
+  assert.equal(subagentsEnabled(false), false)
+  assert.equal(subagentsEnabled('false'), false)
+})
+
+test('isSubagentHeader: every delegation marker classifies a child', () => {
+  // The three markers are written by different layers of the delegation path
+  // (childSessionMeta sets all three for an in-process child).
+  assert.equal(isSubagentHeader({ id: 'main' }), false)
+  assert.equal(isSubagentHeader(undefined), false)
+  assert.equal(isSubagentHeader(null), false)
+  assert.equal(isSubagentHeader({ id: 'lead', cwd: '/tmp' }), false)
+  assert.equal(isSubagentHeader({ id: 'child', parentSession: 'lead' }), true)
+  assert.equal(isSubagentHeader({ id: 'child', origin: 'subagent' }), true)
+  assert.equal(isSubagentHeader({ id: 'child', delegationDepth: 1 }), true)
+  // depth 0 is a top-level session (absent depth is the same fact)
+  assert.equal(isSubagentHeader({ id: 'main', delegationDepth: 0 }), false)
+  // a malformed value must not be read as a child
+  assert.equal(isSubagentHeader({ id: 'x', delegationDepth: '1' }), false)
+  assert.equal(isSubagentHeader({ id: 'x', parentSession: null }), false)
+})
+
+test('directiveText: the switch withholds the directive from CHILDREN only', () => {
+  const chain = { preference: 'zh', reported: 'zh', descMode: 'auto' }
+  const main = directiveText({ isChild: false, enabled: true, ...chain })
+  const child = directiveText({ isChild: true, enabled: true, ...chain })
+  const childOff = directiveText({ isChild: true, enabled: false, ...chain })
+  const mainOff = directiveText({ isChild: false, enabled: false, ...chain })
+  // ON (the default) is byte-identical for both audiences
+  assert.equal(child, main)
+  assert.match(child, /简体中文/)
+  // OFF removes the child contribution and leaves the main agent untouched
+  assert.equal(childOff, '')
+  assert.equal(mainOff, main)
+  // an undetected language contributes nothing for either audience
+  assert.equal(directiveText({ isChild: true, enabled: true, descMode: 'auto' }), '')
+  // a disabled channel family stays disabled regardless of audience
+  assert.equal(directiveText({ isChild: false, enabled: true, descMode: 'off', thinkMode: 'off', outMode: 'off', ...{ preference: 'zh' } }), '')
+})
+
+test('host half: children get a SCOPED entry under the same name, installed per agent', () => {
+  // The global entry keeps serving the main agent (and anything this plugin
+  // cannot classify); a child's own scope shadows it by name, which is what
+  // makes the audience switch authoritative rather than additive.
+  assert.match(hostSource, /agent\.ctx\.inject\(\['systemPrompt'\]/)
+  assert.match(hostSource, /isSubagentHeader\(header\)/)
+  assert.match(hostSource, /pctx\.on\('agent\/created'/)
+  assert.match(hostSource, /pctx\.on\('agent\/disposed'/)
+  // agents that already exist when this plugin loads are classified too
+  assert.match(hostSource, /agents\.list\(\)/)
+  // the shadow reuses the SAME name and order, so it shadows instead of adding
+  const shadow = hostSource.slice(hostSource.indexOf('const installShadow'))
+  assert.match(shadow, /name: CONTEXT_NAME/)
+  assert.match(shadow, /order: CONTEXT_ORDER/)
+  assert.match(shadow, /text: \(\) => textFor\(sctx, true\)/)
+})
+
+test('host half: the audience switch is declared on BOTH settings eras, default on', () => {
+  // NEW era (row Config) and OLD era (registered namespace) must carry the
+  // same field, or the card would offer a switch one host cannot store.
+  const occurrences = [...hostSource.matchAll(/subagents: (live\()?Schema\.boolean\(\)\.default\(true\)/g)]
+  assert.equal(occurrences.length, 2, 'expected the field on the row Config and the legacy namespace schema')
+  assert.match(hostSource, /subagents: valueOf\(config\.subagents\)/)
+  assert.match(hostSource, /enabled: subagentsEnabled\(own\.subagents\)/)
 })
 
 // ── client half bundle discipline ────────────────────────────────────────────
@@ -406,6 +493,37 @@ test('client bundle: the chevron probes the real glyph names, not a spelling no 
   assert.match(clientSource, /firstIcon\(\["IconChevronDownOutlineRegular", "IconChevronDownOutlineMedium", "IconChevronDownOutline14"\]\)/)
   const probe = clientSource.slice(clientSource.indexOf('var Chevron ='))
   assert.doesNotMatch(probe.slice(0, probe.indexOf('\n')), /icon\("IconChevronDownOutline14"\)$/, 'the probe must not bet on the legacy name alone')
+})
+
+test('client bundle: the audience switch renders default-on and writes a boolean', () => {
+  // The card reads an absent field as ON (nobody who never touched it may end
+  // up narrowing coverage) and writes real booleans, which the new-era Config
+  // (`Schema.boolean()`) and the legacy namespace schema both accept.
+  assert.match(clientSource, /var subOn = !\(value\.subagents === false \|\| value\.subagents === "false"\)/)
+  assert.match(clientSource, /write\(\{ subagents: true \}\)/)
+  assert.match(clientSource, /write\(\{ subagents: false \}\)/)
+  for (const key of ['sub.title', 'sub.on', 'sub.off', 'sub.hint']) {
+    assert.ok(clientSource.includes('t("' + key + '")'), 'the card must render ' + key)
+  }
+})
+
+test('client bundle: the audience copy explains the fork boundary in every dictionary', () => {
+  // The hint is the only place the switch's ONE surprising interaction is
+  // documented for users: a forked teammate inherits the main agent's already
+  // committed history snapshot, which no switch can rewrite.
+  const zhBlock = clientSource.slice(clientSource.indexOf('var zh = {'), clientSource.indexOf('var en = {'))
+  const enBlock = clientSource.slice(clientSource.indexOf('var en = {'), clientSource.indexOf('var LOCALES = '))
+  const dictionaries = [zhBlock, enBlock,
+    ...objectAt(clientSource, 'var LOCALES = ').split('/* locale: ').slice(1)]
+  assert.equal(dictionaries.length, 21)
+  for (const block of dictionaries) {
+    const at = block.indexOf('"sub.hint"')
+    assert.ok(at >= 0, 'a dictionary is missing sub.hint')
+    // Read to the end of the line rather than through a quoted capture: some
+    // translations escape inner quotes, which would truncate a regex match.
+    const line = block.slice(at, block.indexOf('\n', at))
+    assert.match(line, /fork/i, 'sub.hint must name the fork boundary: ' + line.slice(0, 60))
+  }
 })
 
 test('client bundle: card receives scopes ONLY through the inject factory', () => {

@@ -188,6 +188,13 @@ export const Config = Schema === null ? undefined : Schema.object({
   // "reply in the language the user typed in".
   outMode: live(Schema.string().pattern(MODE_PATTERN).default('off')),
   outLocale: live(Schema.string().pattern(BCP47).required(false)),
+  // ── audience: do teammates / subagents carry the same directive?
+  // Defaults TRUE (the user's decision, 2026-09-25): a teammate writing tool
+  // descriptions in another language is exactly as visible in the UI as the
+  // main agent doing it. `false` withholds the contribution from every child
+  // agent (Agent Team members, `subagent`/`spawn_teammate` children at any
+  // nesting depth) while the main agent keeps it.
+  subagents: live(Schema.boolean().default(true)),
 })
 
 /**
@@ -198,6 +205,48 @@ export const Config = Schema === null ? undefined : Schema.object({
  */
 export function valueOf(value) {
   return value && typeof value.get === 'function' ? value.get() : value
+}
+
+/**
+ * Normalize the `subagents` switch. Anyone who never touched it gets the
+ * default TRUE, and only an explicit false (boolean or the string a
+ * hand-edited profile patch may carry) withholds the directive from children
+ * — an unreadable value must never silently narrow the plugin's coverage.
+ * @param {unknown} value - the resolved `subagents` field.
+ * @returns {boolean} whether child agents (teammates / subagents) get the directive.
+ */
+export function subagentsEnabled(value) {
+  if (value === false || value === 'false') return false
+  return true
+}
+
+/**
+ * Whether one session header describes a DELEGATED child (an Agent Team
+ * member or any other subagent) rather than a top-level agent. Three
+ * independent markers are checked because they are written by different
+ * layers of the delegation path (`childSessionMeta` sets all three for
+ * in-process children; a restored or foreign child may carry only some).
+ * @param {object|null|undefined} header - `agent.session.header`.
+ * @returns {boolean} true for a child session.
+ */
+export function isSubagentHeader(header) {
+  if (!header || typeof header !== 'object') return false
+  if (header.parentSession !== undefined && header.parentSession !== null) return true
+  if (header.origin === 'subagent') return true
+  return typeof header.delegationDepth === 'number' && header.delegationDepth > 0
+}
+
+/**
+ * The text one assembly contributes. The switch only narrows CHILD coverage:
+ * the main agent keeps its directive, and a child is withheld one when the
+ * user turned `subagents` off. Everything else (channel modes, language
+ * priority, empty-when-undetected) is the unchanged directive builder.
+ * @param {object} input - `{ isChild, enabled }` plus the builder's inputs.
+ * @returns {string} the directive text, or '' when this assembly contributes none.
+ */
+export function directiveText(input = {}) {
+  if (input.isChild === true && input.enabled !== true) return ''
+  return buildChannelDirectives(input)
 }
 
 /**
@@ -399,6 +448,9 @@ export const _internal = {
   buildLanguageDirective,
   buildChannelDirectives,
   valueOf,
+  subagentsEnabled,
+  isSubagentHeader,
+  directiveText,
 }
 
 // ── plugin ──────────────────────────────────────────────────────────────────
@@ -428,6 +480,7 @@ function readersOf(config, legacy) {
       thinkLocale: valueOf(config.thinkLocale),
       outMode: valueOf(config.outMode),
       outLocale: valueOf(config.outLocale),
+      subagents: valueOf(config.subagents),
     }
   }
   /** The user's explicit language choice, read era-appropriately. */
@@ -517,6 +570,9 @@ export function apply(ctx, config) {
               // behavior is "reply in the language the user typed in".
               outMode: Schema.string().pattern(MODE_PATTERN).default('off'),
               outLocale: Schema.string().pattern(BCP47).required(false),
+              // ── audience: teammates / subagents carry the same directive.
+              // Defaults TRUE; false withholds it from every child agent.
+              subagents: Schema.boolean().default(true),
             })
             settings.register(ns, schema)
             log(`${TAG} settings namespace registered: ${SETTINGS_NAMESPACE}`)
@@ -536,53 +592,137 @@ export function apply(ctx, config) {
   // reads the registered namespace through the settings service.
   const readers = readersOf(config, legacySettings)
 
+  /**
+   * Resolve the directive for ONE assembly; `isChild` selects the audience
+   * (main agent vs a teammate/subagent). Evaluated at every assembly, so a
+   * language switch, a mode flip, or the audience switch itself lands on the
+   * next request with no restart and no re-registration.
+   * @param {object} sctx - the context owning this registration (service reads go through `get`).
+   * @param {boolean} isChild - whether this registration serves a child agent.
+   * @returns {string} the contribution text, '' when this assembly gets none.
+   */
+  const textFor = (sctx, isChild) => {
+    try {
+      // SERVICE READ RULE (learned live, 2026-08-31): the callback's context
+      // declares ONLY 'systemPrompt', so `sctx.settings` is an
+      // undeclared-property read that silently resolves undefined — the first
+      // version's optional chain then produced '' for every language and the
+      // directive never injected at all. Optional services must go through
+      // ctx.get('name'), which needs no inject declaration and returns
+      // undefined only when the service is genuinely absent.
+      const settings = sctx.get('settings')
+      // OLD era: values (own and the locale preference) come from the
+      // registered namespaces; NEW era: `own` reads the Config refs and the
+      // preference reads the locale entry's live form.
+      const own = legacySettings
+        ? settings?.get?.(SETTINGS_NAMESPACE) ?? {}
+        : readers.own()
+      // Three channels: descriptions (the original mode/forceLocale fields),
+      // thinking, and replies — each independently auto/force/off; disabled
+      // channels contribute nothing. The audience switch narrows children only.
+      return directiveText({
+        isChild,
+        enabled: subagentsEnabled(own.subagents),
+        preference: readers.preference(settings),
+        reported: own.uiLocale,
+        descMode: own.mode,
+        descLocale: own.forceLocale,
+        thinkMode: own.thinkMode,
+        thinkLocale: own.thinkLocale,
+        outMode: own.outMode,
+        outLocale: own.outLocale,
+      })
+    } catch {
+      return ''
+    }
+  }
+
   // ── the directive: one global dynamic runtime-context entry, re-evaluated
   // at EVERY assembly so a GUI language switch (or a settings edit) lands on
-  // the next request with no restart.
+  // the next request with no restart. GLOBAL is the load-bearing choice: the
+  // main agent, every preset, every agent created before this plugin loads,
+  // and any delegation path this plugin cannot classify all inherit it, so
+  // the audience switch can only ever REMOVE coverage from agents it
+  // positively identified as children (never lose it from the main agent).
   try {
     ctx.inject(['systemPrompt'], (pctx) => {
       try {
         pctx.effect(() => pctx.systemPrompt.context({
           name: CONTEXT_NAME,
           order: CONTEXT_ORDER,
-          text: () => {
-            try {
-              // SERVICE READ RULE (learned live, 2026-08-31): this callback's
-              // context declares ONLY 'systemPrompt', so 'pctx.settings' is an
-              // undeclared-property read that silently resolves undefined —
-              // the first version's optional chain then produced '' for every
-              // language and the directive never injected at all. Optional
-              // services must go through ctx.get('name'), which needs no
-              // inject declaration and returns undefined only when the
-              // service is genuinely absent.
-              const settings = pctx.get('settings')
-              // OLD era: values (own and the locale preference) come from the
-              // registered namespaces; NEW era: `own` reads the Config refs
-              // and the preference reads the locale entry's live form.
-              const own = legacySettings
-                ? settings?.get?.(SETTINGS_NAMESPACE) ?? {}
-                : readers.own()
-              // Three channels: descriptions (the original mode/forceLocale
-              // fields), thinking, and replies — each independently
-              // auto/force/off; disabled channels contribute nothing.
-              return buildChannelDirectives({
-                preference: readers.preference(settings),
-                reported: own.uiLocale,
-                descMode: own.mode,
-                descLocale: own.forceLocale,
-                thinkMode: own.thinkMode,
-                thinkLocale: own.thinkLocale,
-                outMode: own.outMode,
-                outLocale: own.outLocale,
-              })
-            } catch {
-              return ''
-            }
-          },
+          text: () => textFor(pctx, false),
         }), 'dsh-agent-lang: ui-language context')
         log(`${TAG} ui-language directive context active (${CONTEXT_NAME})`)
       } catch (error) {
         log(`${TAG} context registration failed: ${error?.message ?? error}`)
+      }
+
+      // ── audience: CHILD agents get their own SCOPED entry under the same
+      // name. `SystemPrompt` merges the global layer first and lets the scope
+      // chain shadow by name (packages/core/scope/src/store.ts `merge()`:
+      // "scoped entries shadow global entries with the same name"), so this
+      // one entry decides the child's contribution outright: identical text
+      // while the switch is on, '' when the user turned it off — the global
+      // entry cannot slip past it. Registration rides the CHILD's own context
+      // (the canonical per-agent pattern of `file-reference-local`), so it is
+      // scoped to that agent and disposed with it; a nested subagent's own
+      // scope is nearer than its parent's, so the nearest shadow wins.
+      const agents = (() => {
+        try {
+          return pctx.get('agents')
+        } catch {
+          return undefined
+        }
+      })()
+      const shadows = new Map()
+      const disposeShadow = (agent) => {
+        const fiber = shadows.get(agent)
+        if (fiber === undefined) return
+        shadows.delete(agent)
+        try {
+          Promise.resolve(fiber.dispose()).catch((error) => {
+            log(`${TAG} child context disposal failed: ${error?.message ?? error}`)
+          })
+        } catch (error) {
+          log(`${TAG} child context disposal failed: ${error?.message ?? error}`)
+        }
+      }
+      const installShadow = (agent) => {
+        try {
+          if (!agent || typeof agent !== 'object' || shadows.has(agent)) return
+          const header = agent.session && agent.session.header
+          if (!isSubagentHeader(header)) return
+          if (!agent.ctx || typeof agent.ctx.inject !== 'function') return
+          const fiber = agent.ctx.inject(['systemPrompt'], (sctx) => {
+            sctx.systemPrompt.context({
+              name: CONTEXT_NAME,
+              order: CONTEXT_ORDER,
+              text: () => textFor(sctx, true),
+            })
+          })
+          shadows.set(agent, fiber)
+          log(`${TAG} child agent joined the audience switch: ${header && header.id ? header.id : 'unknown'}`)
+        } catch (error) {
+          log(`${TAG} child context registration failed: ${error?.message ?? error}`)
+        }
+      }
+      try {
+        // Agents that already exist (a restored session, or a plugin loaded
+        // after a child was created) are classified once here.
+        if (agents && typeof agents.list === 'function') {
+          for (const agent of agents.list()) installShadow(agent)
+        }
+        // Every new agent, including teammates and nested subagents: the
+        // event is scope-tagged, and an untagged listener is admitted globally
+        // (`scopeTarget` in packages/core/scope/src/index.ts), which is how
+        // sibling plugins observe the whole process.
+        pctx.on('agent/created', ({ agent }) => { installShadow(agent) })
+        pctx.on('agent/disposed', ({ agent }) => { disposeShadow(agent) })
+        pctx.effect(() => () => {
+          for (const agent of [...shadows.keys()]) disposeShadow(agent)
+        }, 'dsh-agent-lang: child ui-language contexts')
+      } catch (error) {
+        log(`${TAG} child audience wiring failed: ${error?.message ?? error}`)
       }
     })
   } catch (error) {

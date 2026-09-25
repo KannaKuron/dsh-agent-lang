@@ -28,7 +28,7 @@
 
 | 路径 | 作用 |
 |---|---|
-| `src/index.js` | host 半：导出行 `Config`（**顶层 await 惰性 import** schemastery，拿不到时 `Config = undefined`，全字段 `.volatile()` 探测）双时代设置面，旧宿主上另经动态 import 注册 `agent-lang` 命名空间；+ 全局动态 runtime-context 指示（`systemPrompt.context`） |
+| `src/index.js` | host 半：导出行 `Config`（**顶层 await 惰性 import** schemastery，拿不到时 `Config = undefined`，全字段 `.volatile()` 探测）双时代设置面，旧宿主上另经动态 import 注册 `agent-lang` 命名空间；+ 全局动态 runtime-context 指示（`systemPrompt.context`）；+ 每个子代理/队员自己作用域里的同名影子（受众开关 `subagents`，见不变量 15） |
 | `src/client.js` | 浏览器半（手写 ModuleLoader bundle）：双时代设置面可选注入（旧 settingsScope / 新 configForms）上报界面语言 + 双座位注册设置卡片 |
 | `cordis.patch.yml` | `dsh plugin add` 官方安装通道的挂载声明(insert 一行插件 row,主机面全局挂载) |
 | `dsh.plugin.json` | 插件注册表清单(id `dsh-external/dsh-agent-lang`) |
@@ -56,10 +56,11 @@
 12. **强制语言下拉选项三来源、去重优先级递减**(v0.4.1):已存自定义 tag(保可见)> **locale 快照的已注册语言**(`ctx.locale.getSnapshot().locales`,经 inject 工厂 `selectableLocales` 喂入组件;任何语言包插件经 `ctx.locale.addLanguage` 注册的语言——如 dsh-i18n——**自然并入并置前,无需本插件感知具体包**)> 静态 LANG_OPTIONS 兜底(未装任何包时依旧可用)。feed 缺失/异常一律降级为静态列表;选项 label 用语言包自带 label(缺失回退 id)。
 13. **peerDependencies 必须声明 dsh 范围**(v0.7.0 起,dsh 0.1.7-rc.1 新增的唯一强制兼容门禁):`"@deepseek-ai/dsh": ">=0.1.0"`——门禁只读 `@deepseek-ai/dsh` / `@deepseek-ai/dsh-*` 的 range、prerelease 参与匹配,不匹配就**静默**少插件(bundle 整层被跳过 / 行被 `disabled`);没有这类 peer 的插件永不被校验。取值规则:下界跟 `engines.dsh` 一致(本构建服务的整条 0.1 线);**不设上界**——本插件靠运行时探测跨版本自愈,上界只会在下一次 dsh 升级时把插件停用,而那时还没有任何真实破坏被观察到;真出现破坏时,在适配版里连代码一起收紧这个 range。**也不要逐个版本枚举**(dsh-any-background 的教训见 CHANGELOG v0.7.0)。另必须配 `peerDependenciesMeta` 把该 peer 标 `optional: true`:门禁不读 meta,但包管理器(autoInstallPeers 默认开启)会去 registry 解析 range,而 `@deepseek-ai/dsh` 已发布的版本**全是 prerelease**、普通 range 按 semver 排除 prerelease ⇒ 不标 optional 会让安装整体失败(`ERR_PNPM_NO_MATCHING_VERSION`;实测见 CHANGELOG v0.7.0)。适配新版本时同步改 range、`engines.dsh`、`peerDependenciesMeta` 与冒烟测试里锁定的字面量。
 14. **卡片 chrome 用官方设计令牌 + 旧字面量回退**(v0.7.1 起,dsh 0.1.7-rc.2 的分界):rc.2 把 `--dsw-radius-xs/sm/md/lg/xl/panel`(`ui-theme/src/styles/base.css`)与统一焦点环 `--dsw-focus-ring-width` / `--dsw-focus-ring-color`(`ui-theme/src/styles/focus.css`,指针模态下官方把颜色置 transparent ⇒ 鼠标点击不画环)铺满整个客户端;本插件是手写 CSS,必须自己跟。写法固定为 `var(--dsw-radius-md,12px)` / `outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary,var(--dsw-alias-brand-primary)))`:令牌在前、**旧字面量在最后**(≤rc.1 宿主逐像素不变),焦点色回退链末端保留 `brand-primary`,因为 `state-business-primary` 在 ≤0.1.6 上不保证存在。冒烟测试禁止旧硬编码写法回流。新增/修改卡片样式时照此办理;若官方再换令牌名,同样「新令牌 + 旧值回退」地跟进。
+15. **受众开关 `subagents`(v0.8.0 起,默认开)**:指示的 **global entry 是唯一兜底**,永远保留原样(主代理、任何 preset、任何本插件识别不了的委派路径都靠它);要做到"只对主代理"必须靠**子代理自己作用域里的同名同序影子**——`SystemPrompt` 的 `merge()` 先铺 global 层、再按作用域链**按名覆盖**(`packages/core/scope/src/store.ts` 的 `merge()`:"scoped entries shadow global entries with the same name"),所以影子就是那个 child 的唯一来源,global entry 不会再多渲一次。识别子代理看 `session.header` 的 `parentSession` / `origin === 'subagent'` / `delegationDepth > 0`(三者取或);安装与回收走官方 per-agent 范式(`agent.ctx.inject(['systemPrompt'], …)` + `agent/created` / `agent/disposed` / apply 时的 `ctx.agents.list()`,范本 `packages/context/file-reference-local/src/index.ts:92`)。**不要把开关实现成"在文本里加个 if"**:文本提供者拿不到 agent 身份(`AssembleContext` 只有 `{ scope, signal }`,`ScopeKey` 是不透明对象、无公开父子查询)。两条已知边界必须留在卡片文案里:① fork 出的子代理继承主代理已完成回合的前缀,其中含主代理**已提交**的快照,开关不重写历史;② 自带 prompt 的外部 provider(codex / claude-code / acp / sdk)与 `minimal` 的封闭 prompt 本就不经过宿主 `systemPrompt`,开关对它们无影响。
 
 ## 验证清单(改动后)
 
-1. `npm test` 全绿(39 项)。
+1. `npm test` 全绿(46 项)。
 2. 真机(隔离实例:`DSH_HOME=<tmp> dsh --profile <probe> --no-open --port <port>`;0.1.7 起 profile 自带 app,**不要再写 `web` 子命令**,否则 `too many arguments`)。
    - 0.1.7+ 时代:界面语言上报落在 profile 的 `cordis.patch.yml` 用户层(`- id: agent-lang` + `config.uiLocale`);设置卡片在侧边栏「插件」面板 → 本插件的 bundle 详情页(旧的 `settings.plugin.item` 座位在 0.1.7 已无 owner,注册静默挂起,属预期)。
    - ≤0.1.6 时代:设置 → 通用 页面出现 `agent-lang:` 命名空间段,卡片在设置 → 插件分区。

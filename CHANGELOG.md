@@ -3,6 +3,35 @@
 > 倒序排列,新版本条目在最上面。条目格式:`## vX.Y.Z — YYYY-MM-DD` + 类型(feat / fix / docs / chore)+ 要点 + 相关链接。
 > 纪律见 AGENTS.md「变更记录纪律」:发版前先更新本文件并随版本提交;事故复盘、复现与真机验证记录也记在这里。
 
+## v0.8.0 — 2026-09-25
+
+**类型**:feat(智能体团队队员 / 子代理的端到端适配 + 「队员与子代理」开关,默认生效;用户 2026-09-25 追加需求)
+
+- **结论先行**:**队员本来就生效**,缺的是开关与其"牙齿"。本插件的指示注册在 **global 层**,而 `SystemPrompt` 组装用的是 `ScopedLayers.merge(scope, …)`——先铺 global 层、再按作用域链覆盖(`packages/core/scope/src/store.ts`),所以任何未封闭 prompt 的 agent(主代理、`spawn_teammate` 队员、`subagent` 子代理、任意嵌套深度)都会合并到这条指示;请求级证据见下(默认态下 lead 与 teammate 的请求体里都有该指示)。本轮新增的是**用户可控的开关**,并让"仅主代理"真正只对主代理注入。
+- **开关语义**:新设置字段 `subagents`(boolean,**默认 true**)。开(默认)=队员/子代理与主代理同语言;关=只对主代理注入。字段在**两个设置时代**都声明(新:行 Config `Schema.boolean().default(true)`;旧:注册命名空间同名字段),卡片两代都可写。
+- **实现(为什么不是在文本里加个 if 就完事)**:文本提供者拿不到"当前是哪个 agent"——`AssembleContext` 只有 `{ scope, signal }`(`packages/core/system-prompt/src/index.ts:56-66`),而 `ScopeKey` 是不透明对象、没有公开的父子查询。因此:
+  - **global entry 原样保留**(名字/顺序/文本都不变):它是主代理、任何 preset、以及本插件**无法识别**的委派路径的兜底——开关只能**减掉**被明确识别为子代理的 agent 的注入,永远不会让主代理丢指示(fail-open)。
+  - **子代理侧在自己的作用域注册同名同序的"影子" entry**:`merge()` 按名覆盖(官方文档语义:"scoped entries shadow global entries with the same name"),影子因此是该 child 的唯一来源——开关开→同文本,开关关→空文本,**global entry 不会同时再渲一次**。
+  - **识别子代理**:`session.header.parentSession` / `origin === 'subagent'` / `delegationDepth > 0` 三者取或(`childSessionMeta` 对进程内子会话三个都写,`packages/subagent/subagent/src/child-agent.ts:139-157`;恢复或外部子会话可能只带其中一个,所以三个都查)。
+  - **安装与回收**:沿用官方 per-agent 范式(`packages/context/file-reference-local/src/index.ts:92`,`agent.ctx.inject(['systemPrompt'], …)`),在 `agent/created` 与 apply 时的 `ctx.agents.list()` 上装、在 `agent/disposed` 与插件卸载时拆;嵌套子代理各自的影子按作用域就近生效。
+  - 委派链逐环求证:`spawn_teammate`(`packages/experimental/tool-agent-team/src/index.ts:190-208`)→ `agentTeams.spawnTeammate` → `roster.spawnAdmitted`(`packages/experimental/agent-team/src/roster.ts:246-300`)→ `ctx.subagents.startContinuable` → `SubagentContinuationManager.startContinuable` → `applyChildComposition`(`packages/subagent/subagent/src/child-agent.ts:200-219`,子代理在此继承父代理的 preset composition)。
+- **已知边界(卡片文案里对用户说明)**:
+  - **fork 出的队员继承主代理已完成回合的前缀**,那段历史里含主代理**已提交**的 runtime-context 快照(其中有语言指示)。关掉开关后,fork 队员**自己新提交**的快照没有指示,但继承段仍在——本插件不重写历史(不变量 1),这是 DSH 的历史模型决定的,不是开关失效。证据见下。
+  - **外部 provider 的子代理**(codex / claude-code / acp / sdk 等自带 prompt 的运行时)本来就不经过宿主 `systemPrompt`,开关对它无影响(保持原状;`minimal` 的封闭 prompt 同理,见不变量 2)。
+- **卡片 / 词典**:卡片新增一行「队员与子代理」两段式开关(与现有模式行同构,复用同一套 `.dl-segBtn` chrome 与焦点环令牌),下方一行说明;`subagents` 缺省读作开(谁没动过就不该被静默缩小覆盖)。21 门语言各新增 4 键——`sub.title` / `sub.on` / `sub.off` / `sub.hint`,键集合与 `zh` 完全相等(冒烟强制),说明文案统一点出 fork 边界。
+- **真机证据**(请求级;隔离 `DSH_HOME=/tmp/dsh-lang-v080`,headless profile 挂 `base + headless + experimental-agent-team-profile + dsh-agent-lang`,`llm-deepseek.baseURL` 指向本地 Anthropic-Messages stub,由 stub 主动回 `spawn_teammate` 工具调用——不需要真模型即可跑出真实队员):
+
+  | 场景 | 主代理(Lead)请求 | 队员 / 子代理请求 |
+  |---|---|---|
+  | 默认(`subagents` 未设) | ✅ 含指示 | **✅ 含指示**(探针 `kind=child`,请求体 40942 字符;全文恰好 **1** 次 "Current language rules" ⇒ 影子是**替换**而非叠加,不会重复注入) |
+  | `subagents: false`,fresh 队员(`spawn`) | ✅ 含指示 | **❌ 0 条指示**(同一 profile、同一链路) |
+  | `subagents: false`,fork 队员 | ✅ 含指示 | 自有快照 ❌;继承的 lead 前缀快照 ✅(`msg#0` 继承段含指示、`msg#2` 队员自有 runtime-context 不含) |
+
+  - GUI(隔离 web profile + 无头 Chrome over CDP,端口 3124,未碰 3080 与用户 profile):插件面板卡片渲染出「队员与子代理: 同样生效」两段、默认选中「同样生效」,说明行显示 fork 边界;点「仅主代理」→ profile 用户层 `cordis.patch.yml` 落 `subagents: false`,点回「同样生效」→ 落 `true`,active 段随之切换;`uiLocale: zh` 未被覆盖(逐字段深合并生效);console 无本插件相关错误。
+  - 冒烟测试 **39 → 46 项全绿**(+7):`subagentsEnabled`(默认开 + 只认显式 false)、`isSubagentHeader`(三个标记 + 畸形值不误判)、`directiveText`(开关只掐子代理;开时两个受众逐字节一致)、「子代理影子注册形态」(同名同序 + `agent/created`/`agent/disposed`/`agents.list()`)、「开关在两代设置面都声明」、卡片开关渲染与写入、21 门词典 `sub.hint` 均点出 fork 边界;另两条旧断言随重构更新(`sctx.get('settings')` 形态、两个 provider 均为函数)。
+- 其余契约复核(rc.2):`systemPrompt.context()` / `CONTEXT_ORDERS`(125 仍空闲)/ `agent/created`、`agent/disposed` 事件形态(`packages/core/agent/src/runtime-types.ts:261-270`)/ `agent.ctx` 作用域语义均未变;`dsh.bundle.patch`、peer 门禁、展示元数据不受影响(逐面表见 v0.7.1)。
+- 版本 0.7.1 → **0.8.0**(minor:新增设置项与覆盖语义),`dsh.plugin.json` 同步。
+
 ## v0.7.1 — 2026-09-25
 
 **类型**:fix(适配 dsh v0.1.7-rc.2:跟进统一设计令牌 + 修复图标探测拼写 + 逐面兼容复核;语言通道行为与全部契约无变更)
