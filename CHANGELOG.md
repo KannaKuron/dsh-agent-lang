@@ -31,6 +31,8 @@
   - 冒烟测试 **39 → 46 项全绿**(+7):`subagentsEnabled`(默认开 + 只认显式 false)、`isSubagentHeader`(三个标记 + 畸形值不误判)、`directiveText`(开关只掐子代理;开时两个受众逐字节一致)、「子代理影子注册形态」(同名同序 + `agent/created`/`agent/disposed`/`agents.list()`)、「开关在两代设置面都声明」、卡片开关渲染与写入、21 门词典 `sub.hint` 均点出 fork 边界;另两条旧断言随重构更新(`sctx.get('settings')` 形态、两个 provider 均为函数)。
 - 其余契约复核(rc.2):`systemPrompt.context()` / `CONTEXT_ORDERS`(125 仍空闲)/ `agent/created`、`agent/disposed` 事件形态(`packages/core/agent/src/runtime-types.ts:261-270`)/ `agent.ctx` 作用域语义均未变;`dsh.bundle.patch`、peer 门禁、展示元数据不受影响(逐面表见 v0.7.1)。
 - 版本 0.7.1 → **0.8.0**(minor:新增设置项与覆盖语义),`dsh.plugin.json` 同步。
+- 发布:npm OIDC 全链路零令牌,`gh run` **36125438957** success(`+ dsh-agent-lang@0.8.0`,带 provenance);发布产物下载复核含 `subagentsEnabled` / `isSubagentHeader` / 子代理影子注册 / `subagents` 两代字段 / 卡片两段开关 / 21 门词典的 codex 边界文案,`peer >=0.1.0` + optional 不变;npmjs `latest` **0.8.0**(首查 404 约 2 分钟后可见),npmmirror `latest` **0.8.0**、tarball 可取。
+- Release:https://github.com/KannaKuron/dsh-agent-lang/releases/tag/v0.8.0
 
 ## v0.7.1 — 2026-09-25
 
