@@ -584,16 +584,29 @@ window.__ModuleLoader__.load({
 			return '"' + id + '"';
 		}
 
-		// ── styles (dl- prefixed; tokens mirror PluginCard.module.css) ──────────
+		// ── styles (dl- prefixed; tokens mirror the official card chrome) ───────
+
+		/* dsh 0.1.7-rc.2 shipped the unified design-token layer this card now
+		   consumes: `--dsw-radius-xs/sm/md/lg/xl/panel` (ui-theme styles/base.css)
+		   and the one focus ring every component declares —
+		   `--dsw-focus-ring-width` + `--dsw-focus-ring-color`
+		   (ui-theme styles/focus.css, which also blanks the colour under pointer
+		   modality). Each var() carries the literal this file used before, so a
+		   host that predates the tokens renders exactly what it rendered then;
+		   the focus colour keeps the old `brand-primary` as its last fallback
+		   because the newer `state-business-primary` may not exist on <=0.1.6. */
+		var RADIUS_MD = "var(--dsw-radius-md,12px)";
+		var RADIUS_SM = "var(--dsw-radius-sm,8px)";
+		var FOCUS_RING = "outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary,var(--dsw-alias-brand-primary)))";
 
 		var STYLE_ID = "dsh-agent-lang-style";
 
 		var CSS = [
-			".dl-card{list-style:none;border:1px solid var(--dsw-alias-border-l2);border-radius:12px;background:var(--dsw-alias-bg-layer-3);-webkit-backdrop-filter:var(--dsh-any-blur-card-panels,blur(12px) saturate(1.15));backdrop-filter:var(--dsh-any-blur-card-panels,blur(12px) saturate(1.15));transition:border-color .16s,background .16s}",
+			".dl-card{list-style:none;border:1px solid var(--dsw-alias-border-l2);border-radius:" + RADIUS_MD + ";background:var(--dsw-alias-bg-layer-3);-webkit-backdrop-filter:var(--dsh-any-blur-card-panels,blur(12px) saturate(1.15));backdrop-filter:var(--dsh-any-blur-card-panels,blur(12px) saturate(1.15));transition:border-color .16s,background .16s}",
 			".dl-card:hover{border-color:var(--dsw-alias-label-dimmed)}",
 			".dl-card.dl-open{background:var(--dsw-alias-bg-layer-2);border-color:var(--dsw-alias-label-dimmed)}",
-			".dl-header{width:100%;appearance:none;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px}",
-			".dl-header:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px}",
+			".dl-header{width:100%;appearance:none;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:" + RADIUS_MD + "}",
+			".dl-header:focus-visible{" + FOCUS_RING + ";outline-offset:-2px}",
 			".dl-headText{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}",
 			".dl-name{font-size:15px;font-weight:600;line-height:1.4;color:var(--dsw-alias-label-primary)}",
 			".dl-desc{font-size:13px;line-height:1.5;color:var(--dsw-alias-label-tertiary)}",
@@ -607,14 +620,14 @@ window.__ModuleLoader__.load({
 			".dl-rowLabel{flex:none;color:var(--dsw-alias-label-tertiary)}",
 			".dl-rowValue{min-width:0;overflow-wrap:anywhere;color:var(--dsw-alias-label-primary)}",
 			".dl-seg{display:flex;gap:8px;flex-wrap:wrap}",
-			".dl-segBtn{appearance:none;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);font:inherit;font-size:13px;padding:6px 12px;cursor:pointer;transition:border-color .16s,color .16s}",
+			".dl-segBtn{appearance:none;border:1px solid var(--dsw-alias-border-l2);border-radius:" + RADIUS_SM + ";background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);font:inherit;font-size:13px;padding:6px 12px;cursor:pointer;transition:border-color .16s,color .16s}",
 			".dl-segBtn:hover{border-color:var(--dsw-alias-label-dimmed)}",
-			".dl-segBtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}",
+			".dl-segBtn:focus-visible{" + FOCUS_RING + ";outline-offset:1px}",
 			".dl-segBtn.dl-segActive{border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-label-primary)}",
 			".dl-force{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--dsw-alias-label-secondary)}",
 			".dl-chanLabel{font-weight:500;color:var(--dsw-alias-label-primary)}",
-			".dl-input{appearance:none;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:inherit;font-size:13px;padding:6px 10px;max-width:220px}",
-			".dl-input:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}",
+			".dl-input{appearance:none;border:1px solid var(--dsw-alias-border-l2);border-radius:" + RADIUS_SM + ";background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary);font:inherit;font-size:13px;padding:6px 10px;max-width:220px}",
+			".dl-input:focus-visible{" + FOCUS_RING + ";outline-offset:1px}",
 			".dl-hint{margin:0;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-tertiary)}",
 			".dl-error{margin:0;font-size:12px;color:var(--dsw-alias-status-danger, #e5484d)}",
 		].join("\n");
@@ -637,7 +650,8 @@ window.__ModuleLoader__.load({
 			}
 		}
 
-		/** Defensive primitives lookup: an unknown icon name degrades to a text chevron. */
+		/** Defensive primitives lookup: an unknown icon name degrades to the next
+		    candidate, and an empty chain to the text chevron. */
 		function icon(name) {
 			try {
 				var component = ui && ui[name];
@@ -645,6 +659,21 @@ window.__ModuleLoader__.load({
 			} catch (error) {
 				return null;
 			}
+		}
+
+		/** The first primitive among the candidate names that this host exports.
+		    The glyph names are part of no contract this plugin can pin: the
+		    `IconChevronDownOutline14` spelling this card used since v0.1.0 is
+		    exported by NO 0.1.7 build (rc.1/rc.2 export the weight-suffixed
+		    `…Regular`/`…Medium` family), so the probe silently fell back to the
+		    text "▾" — the candidate chain is what keeps a real icon on hosts that
+		    ship one and the text glyph on hosts that do not. */
+		function firstIcon(names) {
+			for (var index = 0; index < names.length; index += 1) {
+				var component = icon(names[index]);
+				if (component) return component;
+			}
+			return null;
 		}
 
 		// ── error boundary (the dsh-better-workspace QuietBoundary pattern) ──────
@@ -761,7 +790,7 @@ window.__ModuleLoader__.load({
 				{ key: "out", label: t("chan.output"), modeKey: "outMode", localeKey: "outLocale", m: value.outMode || "off", loc: value.outLocale },
 			];
 
-			var Chevron = icon("IconChevronDownOutline14");
+			var Chevron = firstIcon(["IconChevronDownOutlineRegular", "IconChevronDownOutlineMedium", "IconChevronDownOutline14"]);
 
 			var modes = [
 				{ id: "auto", label: t("mode.auto") },

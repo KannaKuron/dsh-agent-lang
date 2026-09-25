@@ -3,6 +3,55 @@
 > 倒序排列,新版本条目在最上面。条目格式:`## vX.Y.Z — YYYY-MM-DD` + 类型(feat / fix / docs / chore)+ 要点 + 相关链接。
 > 纪律见 AGENTS.md「变更记录纪律」:发版前先更新本文件并随版本提交;事故复盘、复现与真机验证记录也记在这里。
 
+## v0.7.1 — 2026-09-25
+
+**类型**:fix(适配 dsh v0.1.7-rc.2:跟进统一设计令牌 + 修复图标探测拼写 + 逐面兼容复核;语言通道行为与全部契约无变更)
+
+- **卡片展示面跟进 rc.2 的统一设计令牌层**(本插件只注入提示、绝不改发行资产,卡片 chrome 是手写 CSS ⇒ 官方令牌必须自己跟):
+  - **圆角令牌**:rc.2 在 `packages/client/ui-theme/src/styles/base.css:17-22` 新增 `--dsw-radius-xs/sm/md/lg/xl/panel`,并把整条客户端铺开(rc.2 有 **345** 处 `var(--dsw-radius…)` 用法,rc.1 为 **0**)。卡片 `.dl-card` / `.dl-header` 的 `12px` → `var(--dsw-radius-md,12px)`,`.dl-segBtn` / `.dl-input` 的 `8px` → `var(--dsw-radius-sm,8px)`(token 值与旧字面量一一对应,视觉不变)。
+  - **统一焦点环**:rc.2 新增 `packages/client/ui-theme/src/styles/focus.css`,`:root{--dsw-focus-ring-width:2px}`,并全局声明 `:focus-visible{outline-color:var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-width:var(--dsw-focus-ring-width)}`——官方同时把客户端里 **114** 处焦点样式换成这条链,并新增「指针模态下把 `--dsw-focus-ring-color` 置 transparent ⇒ 鼠标点击不画环、键盘导航才画」的语义。卡片 3 处 focus 规则同步为 `outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary,var(--dsw-alias-brand-primary)))`,从而**继承官方新语义**。
+  - 每一处 `var()` 都带旧字面量回退:≤rc.1 宿主(含 0.1.6 线)渲染结果与 v0.7.0 **完全一致**,令牌只是增量升级而非新依赖。焦点色从 `brand-primary`(近黑/近白**填充**色,rc.2 仍用于开关/主按钮填充)改为官方焦点蓝 `state-business-primary` 是 rc.2 的既定方向,不是本插件的自选;回退链末端保留 `brand-primary`,因为 `state-business-primary` 在 ≤0.1.6 宿主上不保证存在。
+- **修复:卡片的 chevron 自首版起从未真正渲染成图标**。探测名 `IconChevronDownOutline14` 在 0.1.7 的 rc.1/rc.2 中**都不存在**(官方图标家族是 `IconChevronDownOutlineRegular` / `…OutlineMedium`;数字后缀式拼写 `…14` 在当前 `ui-primitives` 导出表里没有任何成员),特征探测按设计静默降级为文字「▾」,因此缺陷一直不可见。**v0.4.3 记录的「`IconChevronDownOutline14` 仍在新版 primitives 导出中」是误判,本轮更正**。改为候选链 `firstIcon(["IconChevronDownOutlineRegular","IconChevronDownOutlineMedium","IconChevronDownOutline14"])`:命中即用图标,全不命中仍回退文字,不新增硬依赖(`IconChevronDownOutlineRegular` 是官方自己在 `ui-open-in-app/src/client/OpenTargetButton.tsx:152`、`ui-sidebar-terminal/src/client/TerminalGuide.tsx:5` 等处使用的导出,rc.1 与 rc.2 都在)。
+- **rc.2 逐面复核结论**(权威检出 `/Users/kanna/project/deepseek-harness` @ `477b4f4205`;`dsh --version` = 0.1.7-rc.2;逐面命令 `git -C … diff dsh-v0.1.7-rc.1 dsh-v0.1.7-rc.2 -- <path>`):
+
+  | 本插件消费的官方契约 | rc.2 状态 | 依据(rc.1↔rc.2) | 处置 |
+  |---|---|---|---|
+  | `systemPrompt.context()` 签名 | 未变 | `packages/core/system-prompt/src/index.ts` **零 diff**(该包本版只动 README/package.json);`tool-cordis/src/api-catalog.ts` 里 `context(context: PromptContext): () => void` 声明不变 | 无改动 |
+  | `CONTEXT_ORDERS` 表(110/115/120) | 未变,order 125 仍空闲 | 同上,`packages/core/system-prompt/src/index.ts:164-168` 原样 | 无改动 |
+  | 行 Config 的 `.volatile()` 投影 | 未变 | `packages/settings/settings/src/schema.ts` **零 diff**(`volatileForm` / `hasVolatileAt` 原样) | 无改动 |
+  | `ConfigForm` face + `configForms.get(ns)` | 未变 | `packages/client/ui-settings/src/client/**` **零 diff**(该包本版只给 `contract/slots.ts` 的 `settings.launcher` 加了两个可选 props,本插件不用) | 无改动 |
+  | `settings.describe()` 里 locale 条目的表单值 `preference` | 未变 | `packages/client/locale/src/index.ts` **零 diff**(本版只改 `LanguageRow.module.css` 的圆角与 en/zh 各一条文案);`packages/settings/settings/src/index.ts` **零 diff** | 无改动;真机优先级链实测通过 |
+  | `plugins.bundle.config` 座位(包名 key、`view:'page'`) | 未变 | `ui-plugin-manager/src/client/slot-contract.ts`、`config-ledger.ts`、`extensions/cordis-client-runner/.../slot-catalog.ts` 的该条目 **零 diff**;页面仍 `<section data-plugin-config>{renderSlot('plugins.bundle.config',{view:'page'},{entryKey:pkg.name})}`(`PluginManagerPage.tsx:577-580`) | 无改动 |
+  | `settings.plugin.item` 旧座位 | 仍然无 owner(0.1.7 起) | rc.2 全仓仅剩注释引用 | 保留注册(≤0.1.6 宿主仍用) |
+  | `ctx.locale.register(ns,dicts)` / `getSnapshot().locales` / `locale/change` | 未变 | `packages/client/locale/src/index.ts` **零 diff** | 无改动 |
+  | `dsh.client.platform` 合法值 | 仍只认 `'web'` | `packages/client/modules/src/index.ts:841` `decl.platform !== 'web'` **零 diff**;桌面 Electron renderer 复用同一 shell 资产 | 无改动 |
+  | 插件 `require` 可见的平台模块表 | 未变(9 个 specifier) | `packages/client/web/src/platform.ts` + `seed.ts` **零 diff**;`@deepseek-ai/dsh-client-runtime` 仍不在表内,加载器对无对应 row 的 `inject` 名静默跳过(`client/modules/src/client/system.ts` **零 diff**) | 无改动(冒烟白名单不变) |
+  | 兼容门禁 `@deepseek-ai/dsh*` peer | 未变 | `packages/boot/app-boot/src/plugin-compatibility.ts` **零 diff** | peer `>=0.1.0` + optional 继续有效 |
+  | 插件展示元数据(`locale/*.json` + `package.json.icon`) | 未变 | `packages/boot/app-boot/src/package-meta.ts` **零 diff** | 无改动 |
+  | `dsh.bundle.patch` 字符串/数组 | 未变 | `packages/boot/app-boot/src/profile.ts:59` 仍 `typeof bundle.patch === 'string' ? [bundle.patch] : bundle.patch`(本版只把「跳过的 bundle」从即时 stderr 改成 `skippedBundles` + 启动期 `reportSkippedBundles`) | 本插件是单文件字符串 |
+  | 注入文本的 `{{…}}` 插值 | 风险不变 | `renderContextSections`/`interpolate` 在 `system-prompt/src/index.ts` 零 diff | 三条来源继续全程 `BCP47.test()` |
+  | rc.2 新特性:快捷键服务、「新启用工具即时可用」(`toolUpdate:'addition-only'`)、审批文案跟随界面语言(`PreToolDecision.displayReason`)、语法高亮统一(`util/code-language`)、归档筛选三态、auto-review 可选 bundle、Inspector 不再默认提供 | **均不在本插件消费面** | 各包 diff 逐项确认 | 无改动 |
+
+- **桌面端(家族纪律:两端同时适配)**:本插件桌面路径依赖的三件事本轮全部复核——① 客户端半与 web **同构**:桌面 renderer 复用同一 shell 资产与 ModuleLoader,`dsh.client.platform` 仍只接受 `'web'`(`client/modules/src/index.ts:841`),平台模块表 rc.1↔rc.2 零 diff ⇒ 卡片与上报在两端走同一份代码;② 桌面安装通道要求 bundle 声明 `dsh.bundle.patch`,本插件 `package.json` 已声明(`cordis.patch.yml`,字符串形态在 rc.2 的 `profile.ts:59` 仍受支持),并已带 `icon` + `./locale/*.json` 展示元数据(rc.2 只在 `OPTIONAL_BUNDLES` 注释里把「icon + locale」写成官方可选 bundle 的准入条件,第三方不额外校验);③ **跨端持久化语义**:rc.2 新增 `apps/desktop/src/locale.ts`,`resolveDesktopStartupLocale(preference, languages)` 先读共享 `locale.preference` 再退 OS 语言,并在 `localeChanged` IPC 上即时切换 shell 文案——这与本插件「`locale.preference`(共享、宿主侧)> 本插件 ns 的 `uiLocale`(浏览器上报、易失)」的优先级链**同一口径**,即桌面端的显式语言选择天然被本插件尊重。**只可能在桌面端暴露的复核点(交集成阶段实测)**:① Electron renderer 里 `IconChevronDownOutlineRegular` 是否同样注入到平台模块表(本轮改动后才真正渲染图标);② 桌面端点卡片后 `uiLocale` 是否同样落进 desktop profile 的 `cordis.patch.yml` 用户层;③ OS 语言为中文、`locale.preference` 为空时,桌面 shell 走 `zh-CN` 而 renderer 的 `ctx.locale` 取值是否一致(本插件 auto 链依赖后者);④ 桌面端无浏览器地址栏、首次启动硬刷新路径不同,新装后卡片是否一次出现。
+- **仓库变更**:版本号 0.7.0 → 0.7.1(`package.json` 与 `dsh.plugin.json` 同步);冒烟测试 **37 → 39** 项,新增两条回归守卫——「卡片 chrome 消费 rc.2 令牌且保留字面量回退(并禁止旧硬编码圆角/焦点写法回流)」与「chevron 探测候选链包含真实导出名、不得只赌旧拼写」;AGENTS.md 更新「React 纪律」(图标候选链)与「验证清单」(复核日期 + 测试条数),新增不变量 14(卡片 chrome 的设计令牌纪律);README 中/英文「版本兼容」补 rc.2 段。
+- **真机证据**(隔离实例,全程未碰 3080 与用户 profile;`DSH_HOME=/tmp/dsh-lang-rc2/home`,profile `probe`(web)/`hl`(headless),端口 3124,`dsh --version` = 0.1.7-rc.2):
+  - **启动配方补充**(本机环境坑,与插件无关):PATH 里的自带 node 与 `node-addon-require-builtin`(adhoc 签名)Team ID 不匹配,真实启动会 `fatal: No usable native binding found for node-addon-require-builtin-darwin-arm64`;改用 `/opt/homebrew/opt/node@24/bin/node`(用户 3080 实例用的就是它)即正常,`--dump-config` 不带该绑定所以两种 node 都能跑。
+  - 门禁阳性:`npm pack` 出 0.7.1 tarball → `pnpm add` 进 probe profile(`bundles: [@deepseek-ai/dsh-base, @deepseek-ai/dsh-web-app, dsh-agent-lang]`)→ `dsh --profile probe --dump-config` **stderr 为空**、树里出现 `# == dsh-agent-lang / - id: agent-lang`。
+  - 启动与客户端半:隔离 web 实例启动日志只有一行带 token 的 URL(无 `skipping` / `disabling` / pending 报错);页面 `window.__DSH_BOOT__.entries` 含 `dsh-agent-lang`(client 半进了启动图);`<style id="dsh-agent-lang-style">` 已注入。
+  - **卡片渲染**(无头 Chrome over CDP,控制台仅一条与本插件无关的 Chrome `Password field is not contained in a form` 提示):侧边栏「插件」面板「已安装」组列出本插件,标题/描述来自 `locale/zh.json`(真机证明 0.1.7 的展示资产通道生效);进入 bundle 详情页后 `[data-plugin-config] .dl-card` 渲染出「设置中的显式选择: — / 浏览器上报: zh / 工具描述: 简体中文 (zh) / 模型思考: 关闭 / 回复输出: 关闭」,11 个分段按钮状态正确(跟随界面语言为选中态、思考与回复为关闭)。
+  - **设计令牌真的生效**(不只是写法):页面 `--dsw-radius-md=12px`、`--dsw-radius-sm=8px`、`--dsw-focus-ring-width=2px` 与 rc.2 源码一致;把前两者临时改成 24px/16px 后,卡片与分段按钮的计算圆角**同步变成 24px/16px**,复原后回到 12px/8px ⇒ 卡片确实读令牌而非回退字面量。
+  - **图标修复的产物级证据**:实际服务的 shell 产物 `/assets/index-Q6zc2uHV.js` 导出表含 `IconChevronDownOutlineRegular:X4` 与 `IconChevronDownOutlineMedium:mw`,全文 **0** 处 `IconChevronDownOutline14` ⇒ 旧探测在 rc.2 必然落空(缺陷在产物层复现),新候选链第一项即命中。注:0.1.7 上 bundle 页形态的卡片不渲染折叠头(v0.5.4 的 `view:'page'` 分支),chevron 只出现在 ≤0.1.6 的旧座位,故此处给的是产物级而非像素级证据。
+  - **uiLocale 上报落盘**:probe profile 用户层 `cordis.patch.yml` 出现 `agent-lang: {uiLocale: zh}`;随后把界面语言切到英文,该字段跟随写成 `en`(上报 = 当前 active 界面语言,符合设计)。
+  - **设置写入(volatile)**:卡片点「全部关闭」后,同一文件出现 `mode/thinkMode/outMode: off`,而 `uiLocale` 未被覆盖(逐字段深合并生效)。
+  - **语言注入链路(真实请求级,本地 Anthropic-Messages stub 抓请求体)**:headless profile `hl`(`bundles: [base, headless, dsh-agent-lang]`,`llm-deepseek.baseURL → http://127.0.0.1:3199`,`DEEPSEEK_API_KEY=stub-key`,`dsh --profile hl "say hi"`)——
+    - 无语言可用(无 `uiLocale` 也无 `preference`):宿主 runtime-context 快照里只有官方沙箱/审批策略,**0 条**语言指示(零提示噪声是特性);
+    - `agent-lang.uiLocale: zh` → 快照出现 `Current language rules supersede earlier language directives. tool-call descriptions must be written in 简体中文, not in English; …`;
+    - `uiLocale: zh` + `locale.preference: en` → 指示变 **English**(显式选择压过浏览器上报,与不变量 3 的优先级链一致);
+    - 三通道 `off` → **0 条**指示。
+  - **GUI 级优先级旁证**:浏览器 `navigator.language=zh-CN`、`languages=[zh-CN, zh]`,而设了 `locale.preference: en` 后 `document.documentElement.lang=en`、界面与卡片全英文 ⇒ 官方的界面语言同样让显式选择压过浏览器上报,本插件把 `preference` 放在优先级顶端与官方语义同向。
+  - 冒烟测试 **39 项全绿**。
+- 未在真机覆盖:`minimal` preset 的封闭边界(设计边界,见 AGENTS 不变量 2)未重测;0.1.0…0.1.6 旧宿主本机无 runtime,旧时代路径(旧座位卡片 + chevron 图标)由运行时探测与既有测试保证;桌面端由 Lead 集成阶段统一实测(见上)。
+
 ## v0.7.0 — 2026-09-23
 
 **类型**:feat(适配 dsh v0.1.7-rc.1:声明插件兼容性 peer + 真机全链路复核;保持旧版本完全兼容)

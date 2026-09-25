@@ -46,12 +46,13 @@ Plain JS, no build step, no installed dependencies (schemastery is a peer resolv
 
 ## Version compatibility
 
-**dsh 0.1.7-rc.1 was checked item by item on a real isolated instance and needs no code change** (record: CHANGELOG v0.7.0); the same holds for 0.1.6-alpha.1 (CHANGELOG v0.4.3):
+**dsh 0.1.7-rc.2 and rc.1 were checked item by item on a real isolated instance** (rc.2 record, per-surface zero-diff evidence and live evidence: CHANGELOG v0.7.1; rc.1: v0.7.0); the same holds for 0.1.6-alpha.1 (CHANGELOG v0.4.3):
 
 - The `systemPrompt.context()` contract is unchanged: `PromptContext` is still `{ name, order, text }`, with order 125 still after the official CONTEXT_ORDERS. The `interpolate: false` flag applies to **sections** only, which this plugin does not use.
 - The injected text carries no `{{...}}` interpolation risk: every language source (forced tag, explicit setting, browser report) passes BCP47 validation before it reaches the text.
 - The settings surface still splits at 0.1.7 (row `Config` + `configForms` above it, the registered namespace below), and the settings card still ships both seats: `settings.plugin.item` (hosts ≤ 0.1.6, where it silently waits on 0.1.7+) and `plugins.bundle.config` keyed by the package name (0.1.6-alpha.2+, live on 0.1.7).
 - The manifest declares the compatibility peer dsh 0.1.7-rc.1 enforces — `"@deepseek-ai/dsh": ">=0.1.0"` (optional, so package managers never auto-install a prerelease-only package). The declaration puts this plugin under the gate (it carried no such peer before, so it was never validated) while leaving the range open-ended: the plugin adapts to host changes by runtime detection, so a future dsh upgrade never disables it silently.
+- **Added for rc.2** (v0.7.1): rc.2 rolled out the unified design tokens across the client — corner radii `--dsw-radius-*` and the focus ring `--dsw-focus-ring-*` (the official sheet paints none under pointer modality). The card follows with "new token + old literal fallback", so hosts ≤ rc.1 render exactly as before. The same release fixes a silent defect present since the first version: the probed chevron name `IconChevronDownOutline14` does not exist on 0.1.7 (the family is `…OutlineRegular`/`…OutlineMedium`), so the card had always shown the text "▾"; it now probes a candidate chain.
 
 ## Known limits
 

@@ -72,12 +72,13 @@ pnpm add <tarball 路径>          # package.json 的 dsh.bundle.patch 声明会
 
 ## 版本兼容
 
-**dsh 0.1.7-rc.1 已在隔离实例上逐项复核通过,无需代码改动**(核对记录与真机证据见 CHANGELOG v0.7.0);0.1.6-alpha.1 的核对记录见 CHANGELOG v0.4.3:
+**dsh 0.1.7-rc.2 与 rc.1 已在隔离实例上逐项复核通过**(rc.2 的核对记录、逐面零 diff 依据与真机证据见 CHANGELOG v0.7.1,rc.1 见 v0.7.0);0.1.6-alpha.1 的核对记录见 CHANGELOG v0.4.3:
 
 - `systemPrompt.context()` 契约未变:`PromptContext` 仍是 `{ name, order, text }`,order 125 仍在官方 CONTEXT_ORDERS 之后;`interpolate: false` 只作用于 **sections**,本插件不用。
 - 注入文本不存在 `{{...}}` 插值风险:三条语言来源(强制标签 / 设置里的显式选择 / 浏览器上报)全部经 BCP47 校验后才进入文本。
 - 设置面仍在 0.1.7 分界:0.1.7 起是「行 `Config` + `configForms`」,0.1.6 及以前是注册命名空间;设置卡两个座位照旧——`settings.plugin.item`(≤0.1.6 宿主;0.1.7 上无 owner,静默挂起)与 `plugins.bundle.config`(按包名 key,0.1.6-alpha.2 起,0.1.7 上实际生效)。
 - 插件清单声明了 dsh 0.1.7-rc.1 起强制执行的兼容 peer:`"@deepseek-ai/dsh": ">=0.1.0"`(标为 optional,避免包管理器把只有预发布版本的 `@deepseek-ai/dsh` 拉进安装)。该声明让本插件真正被兼容门禁覆盖(此前没有任何这类 peer,等于永不被校验),同时**不设上界**:插件靠运行时探测跨版本自愈,未来 dsh 升级不会被自动停用。
+- **rc.2 追加**(v0.7.1):rc.2 把统一设计令牌铺满客户端——圆角 `--dsw-radius-*` 与焦点环 `--dsw-focus-ring-*`(指针模态下官方不画环),本插件卡片已按「新令牌 + 旧字面量回退」跟进,≤rc.1 宿主渲染不变;同时修掉一个自首版起就存在的静默缺陷——chevron 探测的 `IconChevronDownOutline14` 在 0.1.7 里并不存在(官方家族是 `…OutlineRegular`/`…OutlineMedium`),卡片因此一直显示文字「▾」,现在改为候选链探测。
 
 ## 已知边界
 

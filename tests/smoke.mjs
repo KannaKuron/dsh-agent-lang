@@ -376,6 +376,38 @@ test('client bundle: the bundle parses (a dictionary typo would blank the card)'
   assert.doesNotThrow(() => { new Function(clientSource) })
 })
 
+test('client bundle: card chrome consumes the 0.1.7-rc.2 design tokens with literal fallbacks', () => {
+  // rc.2 shipped the unified token layer this card follows: the radius scale
+  // (ui-theme styles/base.css `--dsw-radius-*`) and the one focus ring
+  // (ui-theme styles/focus.css `--dsw-focus-ring-width` +
+  // `--dsw-focus-ring-color`, which also blanks the colour under pointer
+  // modality). Each var() names the literal this file used before, so a host
+  // that predates the tokens keeps rendering what it rendered then — the tokens
+  // are an upgrade, never a requirement.
+  assert.match(clientSource, /var\(--dsw-radius-md,12px\)/)
+  assert.match(clientSource, /var\(--dsw-radius-sm,8px\)/)
+  assert.match(clientSource, /var\(--dsw-focus-ring-width,2px\) solid var\(--dsw-focus-ring-color,/)
+  // the pre-token spellings must be gone from the rules themselves (a stale
+  // hardcoded radius would silently win over the token nothing else applies)
+  assert.doesNotMatch(clientSource, /border-radius:12px/)
+  assert.doesNotMatch(clientSource, /border-radius:8px/)
+  assert.doesNotMatch(clientSource, /outline:2px solid/)
+  // the last fallback stays the pre-rc.2 brand colour: state-business-primary
+  // is the newest name in the chain and need not exist on <= 0.1.6 hosts
+  assert.match(clientSource, /var\(--dsw-alias-state-business-primary,var\(--dsw-alias-brand-primary\)\)/)
+})
+
+test('client bundle: the chevron probes the real glyph names, not a spelling no host exports', () => {
+  // v0.1.0..v0.7.0 asked for `IconChevronDownOutline14`, which NO 0.1.7 build
+  // exports (the family is `…OutlineRegular` / `…OutlineMedium`), so the card
+  // silently rendered the text "▾" while the probe looked correct. The chain
+  // keeps a real icon wherever a host ships one and the text glyph otherwise.
+  assert.match(clientSource, /function firstIcon\(names\)/)
+  assert.match(clientSource, /firstIcon\(\["IconChevronDownOutlineRegular", "IconChevronDownOutlineMedium", "IconChevronDownOutline14"\]\)/)
+  const probe = clientSource.slice(clientSource.indexOf('var Chevron ='))
+  assert.doesNotMatch(probe.slice(0, probe.indexOf('\n')), /icon\("IconChevronDownOutline14"\)$/, 'the probe must not bet on the legacy name alone')
+})
+
 test('client bundle: card receives scopes ONLY through the inject factory', () => {
   assert.match(clientSource, /function DescLangCard\(props\) \{/)
   // verified against dsh-better-workspace 0.6.0: top-level options fields do
