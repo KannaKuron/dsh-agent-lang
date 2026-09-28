@@ -232,9 +232,10 @@ test('host half: lazy Config (dsh >= 0.1.7 settings) with volatile probing', () 
 
 test('host half: legacy namespace registration survives behind the era probe', () => {
   // dsh <= 0.1.6 keeps the registered-namespace path, gated on the service
-  // still exposing register().
-  assert.match(hostSource, /import\('@deepseek-ai\/dsh-settings'\)/)
-  assert.match(hostSource, /settingsNamespace/)
+  // still exposing register(). The settingsNamespace() era probe is gone:
+  // the helper left dsh in 0.1.2-alpha.2, far below the 0.1.6-alpha.2 floor,
+  // so register() always takes the plain namespace string.
+  assert.doesNotMatch(hostSource, /settingsNamespace/)
   assert.match(hostSource, /settings\.register\(ns, schema\)/)
   assert.match(hostSource, /typeof settings\.register === 'function'/)
 })
@@ -370,9 +371,9 @@ test('client bundle: reports ONLY uiLocale into the agent-lang namespace', () =>
   }
 })
 
-test('client bundle: settings card keyed by the namespace, dictionaries published to the registry', () => {
-  assert.match(clientSource, /settings\.plugin\.item/)
-  assert.match(clientSource, /key: NS/)
+test('client bundle: settings card keyed for the bundle page, dictionaries published to the registry', () => {
+  assert.doesNotMatch(clientSource, /settings\.plugin\.item/, 'the legacy settings-list seat must stay gone')
+  assert.match(clientSource, /key: "dsh-agent-lang"/)
   // The zh/en pair rides one call; every third language plus the macro-tag
   // aliases ride a second one, so a language added to the table cannot be left
   // unregistered — an unregistered dictionary is silently inert no matter how
@@ -381,15 +382,14 @@ test('client bundle: settings card keyed by the namespace, dictionaries publishe
   assert.match(clientSource, /ctx\.locale\.register\(DICT_NS, Object\.assign\(\{\}, LOCALE_ALIASES, LOCALES\)\)/)
 })
 
-test('client bundle: dual settings seat across dsh generations (0.1.6-alpha.2+)', () => {
-  // Legacy seat stays (older hosts) and the Plugins-page seat is keyed by
-  // the PACKAGE name — the page's configLedger matches on pkg.name, not on
-  // the settings namespace.
-  assert.match(clientSource, /slots\.inject\("settings\.plugin\.item"/)
+test('client bundle: the Plugins-page settings seat across dsh generations (0.1.6-alpha.2+)', () => {
+  // Single seat now: the legacy settings-list card went away with the raised
+  // host floor, and the Plugins-page seat is keyed by the PACKAGE name — the
+  // page's configLedger matches on pkg.name, not on the settings namespace.
   assert.match(clientSource, /slots\.inject\("plugins\.bundle\.config"/)
   assert.match(clientSource, /key: "dsh-agent-lang"/)
-  // Both seats render the same component; the page seat passes view="page"
-  // and the component drops its collapsible shell there.
+  // The page seat passes view="page" and the component drops its collapsible
+  // shell there.
   assert.match(clientSource, /props\.view === "page"/)
 })
 
@@ -535,12 +535,11 @@ test('client bundle: card receives scopes ONLY through the inject factory', () =
   assert.match(clientSource, /function DescLangCard\(props\) \{/)
   // verified against dsh-better-workspace 0.6.0: top-level options fields do
   // NOT reach the component — the scopes must ride the inject factory.
-  // (v0.4.4: the factory is hoisted into `injected` so BOTH seats — the
-  // legacy settings.plugin.item card and the plugins.bundle.config page —
-  // share one definition.)
+  // (the factory is hoisted into `injected` so the registration and any
+  // future seat share one definition.)
   assert.match(clientSource, /var injected = function \(\) \{[\s\S]*?\n\s*return \{/)
   const optionsBlock = clientSource.slice(
-    clientSource.indexOf('key: NS'),
+    clientSource.indexOf('key: "dsh-agent-lang"'),
     clientSource.indexOf('var injected'),
   )
   assert.ok(!/(^|\n)\s*(scope|localeScope|store):/.test(optionsBlock), 'scopes leaked into top-level registration options')
@@ -571,9 +570,11 @@ test('package manifest: declares the dsh peer the 0.1.7+ compatibility gate read
   // version, and a mismatch silently removes the plugin (bundle layer
   // skipped, row disabled). A manifest with no such peer is never validated,
   // so the range is part of the contract and this test pins it:
-  //   floor `>=0.1.0` = the line this build serves (old era <= 0.1.6 through
-  //                      the registered namespace, new era >= 0.1.7 through
-  //                      the row Config), the floor engines.dsh already names;
+  //   floor `>=0.1.6-alpha.2` = the oldest host this build serves: the first
+  //                      one with the Plugins panel's bundle-config seat (the
+  //                      only settings card seat now; 0.1.6 never shipped a
+  //                      stable). Old era <= 0.1.6 registers the namespace,
+  //                      new era >= 0.1.7 rides the row Config;
   //   NO ceiling. This plugin survives host changes by RUNTIME detection (the
   //   dual-era probes), and the family rule is that an upgrading user must not
   //   lose the plugin to a version the gate merely *guesses* is incompatible:
@@ -585,8 +586,8 @@ test('package manifest: declares the dsh peer the 0.1.7+ compatibility gate read
   // dsh-any-background@0.3.0, whose `... || 0.1.7-alpha.1` enumeration dropped
   // it on 0.1.7-rc.1 and forced per-machine exemptions.
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
-  assert.equal(pkg.peerDependencies['@deepseek-ai/dsh'], '>=0.1.0')
-  assert.match(pkg.engines.dsh, /^>=0\.1\.0$/, 'peer floor and engines.dsh must tell one compatibility story')
+  assert.equal(pkg.peerDependencies['@deepseek-ai/dsh'], '>=0.1.6-alpha.2')
+  assert.match(pkg.engines.dsh, /^>=0\.1\.6-alpha\.2$/, 'peer floor and engines.dsh must tell one compatibility story')
   // OPTIONAL, and it has to stay optional: the gate reads peerDependencies
   // only (`plugin-compatibility.ts` touches no other field, and dsh's runtime
   // reads `peerDependenciesMeta` nowhere at all), while a package manager with

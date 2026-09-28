@@ -50,7 +50,7 @@
  *
  * The browser half (src/client.js) is the reporter AND the settings card:
  * it pushes the active locale into `agent-lang.uiLocale` and renders the
- * Settings → Plugins card (`settings.plugin.item` keyed by the namespace)
+ * Settings card (legacy-era namespace registration)
  * that switches mode / forceLocale.
  *
  * SETTINGS, TWO ERAS (split at dsh 0.1.7):
@@ -60,7 +60,7 @@
  *   `agent-lang` namespace with a CALLABLE schemastery schema (the service
  *   resolves values by calling `schema(merged)`; zod objects throw and the
  *   namespace is never served, which would also keep the card from
- *   dispatching). @deepseek-ai/dsh-settings' optional settingsNamespace()
+ *   dispatching). the namespace-branding helper that @deepseek-ai/dsh-settings
  *   helper is probed: newer dsh removed it and register() takes a plain
  *   string, older dsh accepts the branded form — one call shape satisfies
  *   every old host.
@@ -539,17 +539,15 @@ export function apply(ctx, config) {
       ctx.inject(['settings'], (sctx) => {
         // Dynamic import keeps resolution on the profile's shared fallback;
         // the schema mirrors the row Config field-for-field.
-        Promise.all([import('@deepseek-ai/dsh-settings'), import('@deepseek-ai/schemastery')])
-          .then(([ds, sm]) => {
+        import('@deepseek-ai/schemastery')
+          .then((sm) => {
             const settings = sctx && sctx.settings
             if (!settings || typeof settings.register !== 'function') return
             const Schema = sm.default
-            // Era probe: dsh >= 0.1.2-alpha.2 removed settingsNamespace();
-            // register() takes a plain string there, and the older register()
-            // accepted the branded helper — one call satisfies both eras.
-            const ns = typeof ds.settingsNamespace === 'function'
-              ? ds.settingsNamespace(SETTINGS_NAMESPACE)
-              : SETTINGS_NAMESPACE
+            // register() takes a plain string: the removed namespace-branding helper
+            // was compile-time branding and dsh removed it in 0.1.2-alpha.2,
+            // far below the 0.1.6-alpha.2 floor — no era probe left.
+            const ns = SETTINGS_NAMESPACE
             const schema = Schema.object({
               // Browser-reported active GUI locale; the client half writes
               // ONLY this field, so user-configured modes/locales survive

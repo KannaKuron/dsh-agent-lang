@@ -3,6 +3,25 @@
 > 倒序排列,新版本条目在最上面。条目格式:`## vX.Y.Z — YYYY-MM-DD` + 类型(feat / fix / docs / chore)+ 要点 + 相关链接。
 > 纪律见 AGENTS.md「变更记录纪律」:发版前先更新本文件并随版本提交;事故复盘、复现与真机验证记录也记在这里。
 
+## v0.9.0 — 2026-09-28
+
+**类型**:chore(清理 0.1.6 以前的兼容代码,宿主下限提高到 0.1.6-alpha.2)
+
+- **删旧设置座位**:client 半不再注册 `settings.plugin.item`(0.1.6-alpha.1 及更早的
+  「设置 → 插件」列表座位);设置卡只挂 `plugins.bundle.config`(0.1.6-alpha.2 起的
+  「插件」面板 bundle 详情页,即所有在维护宿主上的唯一设置面)。
+- **删 settingsNamespace() era 探测**:该 helper 在 dsh 0.1.2-alpha.2 就已移除,远低
+  于新下限;host 半旧时代注册改直接传普通字符串命名空间,并随之去掉
+  `@deepseek-ai/dsh-settings` 的动态 import(它唯一的用途就是取那个 helper)。
+  0.1.7 分界的 `typeof settings.register === 'function'` 双时代探测**保留**
+  (0.1.6-alpha.2 宿主走命名空间注册,0.1.7+ 走行 Config)。
+- **宿主下限**:`engines.dsh` 与 peer `@deepseek-ai/dsh` 从 `>=0.1.0` 提到
+  `>=0.1.6-alpha.2`(0.1.6 从未出过正式版,alpha.2 是首个带插件面板配置座位的版本;
+  门禁 `semver.satisfies(..., { includePrerelease: true })` 对该写法放行 0.1.7-rc.2)。
+  冒烟测试的字面量断言与守卫同步更新。
+- AGENTS.md 同步:不变量 4(旧时代注册形态)/ 5(单座位)/ 6(slot 契约)/ 13(peer
+  下限)与验证清单。
+
 ## v0.8.0 — 2026-09-25
 
 **类型**:feat(智能体团队队员 / 子代理的端到端适配 + 「队员与子代理」开关,默认生效;用户 2026-09-25 追加需求)

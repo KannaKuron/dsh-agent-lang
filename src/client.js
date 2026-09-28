@@ -7,9 +7,8 @@
  *      GUI is actually showing) into the Host's `agent-lang` settings
  *      namespace via a bound `settingsScope`, so the Host-side prompt
  *      directives can localize even before the user ever picks a language.
- *   2. SETTINGS CARD — registers a `settings.plugin.item` card keyed by the
- *      SAME namespace. The Plugins tab dispatches the intersection of
- *      Host-served namespaces and registered cards. The card exposes three
+ *   2. SETTINGS CARD — registers the Plugins page bundle-config card
+ *      (plugins.bundle.config, keyed by the PACKAGE name). The card exposes The card exposes three
  *      independently configured channels — tool-call descriptions, model
  *      thinking, user-facing replies — each auto (follow the GUI language) /
  *      force (a fixed BCP 47 tag) / off, plus one-click "sync all to GUI"
@@ -1179,21 +1178,11 @@ window.__ModuleLoader__.load({
 							},
 						};
 					};
-					// Legacy seat (dsh <= 0.1.6-alpha.1): Settings → Plugins card,
-					// keyed by the settings namespace.
-					slots.inject("settings.plugin.item", function () {
-						return slots.register({
-							name: "settings.plugin.item",
-							key: NS,
-							locale: DICT_NS,
-							inject: injected,
-						}, function CardWithBoundary(props) {
-							return E(QuietBoundary, null, E(DescLangCard, props));
-						});
-					});
 					// dsh 0.1.6-alpha.2+: the Plugins page's bundle configuration
-					// seat, keyed by the PACKAGE name. Both injects wait for their
-					// own declaration, so exactly one is live on any host version.
+					// seat, keyed by the PACKAGE name. This is the only settings
+					// seat now — the legacy settings-list card (pre-alpha.2) went
+					// away with the raised host floor. The inject waits for the
+					// slot's own declaration, so older hosts never grow it.
 					slots.inject("plugins.bundle.config", function () {
 						return slots.register({
 							name: "plugins.bundle.config",
