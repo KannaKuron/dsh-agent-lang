@@ -3,6 +3,14 @@
 > 倒序排列,新版本条目在最上面。条目格式:`## vX.Y.Z — YYYY-MM-DD` + 类型(feat / fix / docs / chore)+ 要点 + 相关链接。
 > 纪律见 AGENTS.md「变更记录纪律」:发版前先更新本文件并随版本提交;事故复盘、复现与真机验证记录也记在这里。
 
+## v0.9.1 — 2026-10-04
+
+**类型**:docs(对 dsh 0.2.1 的复核结论与官方「description 前置」协同说明;零代码变化)
+
+- **对 dsh 0.2.1-alpha.1 逐项复核通过(零适配需求)**:`systemPrompt.context` 签名与 `CONTEXT_ORDERS` 常量表(SANDBOX_POLICY 110 / APPROVAL_POLICY 115 / SUBAGENT_DELEGATION 120)在 0.2.0-rc.2 → 0.2.1-alpha.1 间**零变化**(system-prompt 包 src 仅删 invariant 附属物),order 125 依然安全;`plugins.bundle.config` 座位与 `configForms` 契约无变化;注入文本无 `{{...}}` 插值风险(BCP47 校验链不变)。
+- **官方 0.2.1 把 `description` 排到参数说明最前**(`bash`/`pwsh` 加「Provide `description` before `command` in the arguments」;`run_code` 的参数说明改为先 `description` 后 `code`),并让 UI 在**准备阶段**渲染已到达的描述——README(中英)新增一节说明两者正交互补:官方管顺序(准备阶段卡片有标题),本插件管语言(标题用什么语言写);官方 schema 的英文示例措辞未变,语言落差依旧由描述通道补齐;新工具(0.2.1 的 `schedule_*`)的描述自动受控。
+- 相关:[dsh v0.2.1-alpha.1 release notes](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.1-alpha.1)。
+
 ## v0.9.0 — 2026-09-28
 
 **类型**:chore(清理 0.1.6 以前的兼容代码,宿主下限提高到 0.1.6-alpha.2)

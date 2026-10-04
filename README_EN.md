@@ -55,6 +55,15 @@ Plain JS, no build step, no installed dependencies (schemastery is a peer resolv
 - The manifest declares the compatibility peer dsh 0.1.7-rc.1 enforces — `"@deepseek-ai/dsh": ">=0.1.0"` (optional, so package managers never auto-install a prerelease-only package). The declaration puts this plugin under the gate (it carried no such peer before, so it was never validated) while leaving the range open-ended: the plugin adapts to host changes by runtime detection, so a future dsh upgrade never disables it silently.
 - **Added for rc.2** (v0.7.1): rc.2 rolled out the unified design tokens across the client — corner radii `--dsw-radius-*` and the focus ring `--dsw-focus-ring-*` (the official sheet paints none under pointer modality). The card follows with "new token + old literal fallback", so hosts ≤ rc.1 render exactly as before. The same release fixes a silent defect present since the first version: the probed chevron name `IconChevronDownOutline14` does not exist on 0.1.7 (the family is `…OutlineRegular`/`…OutlineMedium`), so the card had always shown the text "▾"; it now probes a candidate chain.
 
+## Relation to dsh 0.2.1's "description first" wording (complementary, zero conflict)
+
+Since dsh 0.2.1 the official tool schemas put the `description` parameter explanation FIRST for `bash` / `pwsh` / `run_code` ("Provide `description` before `command` in the arguments"; run_code's parameter wording now lists `description` before `code`), and the UI renders an arrived description already during a call's preparing phase. Both changes are orthogonal to this plugin and complementary:
+
+- **the host owns the order**: nudging the model to send the description first, so the preparing-phase card has a title to render;
+- **this plugin owns the language**: the same runtime-context directive decides which language those descriptions (preparing-phase titles included) are written in.
+
+The official English example wording in the schemas is unchanged, so the "Chinese UI, English descriptions" gap is still this plugin's description channel to close. Calls to new tools (0.2.1's `schedule_*` reminder tools included) are covered automatically: the channel is global and keys off the call's `description` argument, independent of tool-list churn. Re-verified against dsh 0.2.1-alpha.1: the `systemPrompt.context` signature and `CONTEXT_ORDERS` (110/115/120) are byte-identical, order 125 stays safe.
+
 ## Known limits
 
 - `minimal` is sealed by design (see table).

@@ -23,6 +23,15 @@ DSH 里每一次工具调用的 `description` 参数都是必填的,而且**原�
 | 智能体团队队员 / 普通子代理(v0.8.0) | ✅ **默认生效** | 队员与子代理的请求同样带上指示;设置里可切「仅主代理」。**fork 出的队员**会继承主代理已完成回合的历史快照(含已提交的指示),开关不重写历史 |
 | `minimal`(极简模式) | ❌(设计如此) | minimal 的 persona 是 `complete: true` 且压制 runtime context,提示词对一切后挂贡献者封闭——任何提示级插件都无法进入,需要产品侧改动 |
 
+## 与 dsh 0.2.1「description 前置」的关系(互补,零冲突)
+
+dsh 0.2.1 起,官方把 `description` 参数的说明排到了 `bash` / `pwsh` / `run_code` 工具 schema 的**最前面**(「Provide `description` before `command` in the arguments」;run_code 的参数说明也改为先 `description` 后 `code`),并让 UI 在工具调用的**准备阶段**就渲染已到达的描述。这两件事与本插件正交且互补:
+
+- **官方管「顺序」**:引导模型先发 description,准备阶段的调用卡片就有标题可渲染;
+- **本插件管「语言」**:同一条 runtime-context 指示决定这些描述(含准备阶段标题)用什么语言书写。
+
+官方 schema 里的英文示例措辞没有变,「界面中文、描述英文」的落差依旧由本插件的描述通道补齐。新工具(如 0.2.1 的 `schedule_*` 提醒工具)的调用描述同样自动受控:通道是全局的,按工具调用的 `description` 参数生效,与工具清单增减无关。已对 dsh 0.2.1-alpha.1 复核:`systemPrompt.context` 签名与 `CONTEXT_ORDERS`(110/115/120)零变化,order 125 依然安全。
+
 ## 工作原理
 
 ```
