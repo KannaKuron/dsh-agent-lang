@@ -648,6 +648,12 @@ export function apply(ctx, config) {
         pctx.effect(() => pctx.systemPrompt.context({
           name: CONTEXT_NAME,
           order: CONTEXT_ORDER,
+          // interpolate: false (dsh >= 0.2.1-alpha.2) renders the directive
+          // text literally: prompt-variable interpolation cannot misfire on
+          // it (an unknown {{...}} reference throws BEFORE the first model
+          // request and kills the turn — the BCP47 validation chain below
+          // stays as belt-and-braces). Older hosts ignore the unknown field.
+          interpolate: false,
           text: () => textFor(pctx, false),
         }), 'dsh-agent-lang: ui-language context')
         log(`${TAG} ui-language directive context active (${CONTEXT_NAME})`)
@@ -695,6 +701,7 @@ export function apply(ctx, config) {
             sctx.systemPrompt.context({
               name: CONTEXT_NAME,
               order: CONTEXT_ORDER,
+              interpolate: false,
               text: () => textFor(sctx, true),
             })
           })

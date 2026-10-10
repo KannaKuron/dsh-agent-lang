@@ -3,6 +3,15 @@
 > 倒序排列,新版本条目在最上面。条目格式:`## vX.Y.Z — YYYY-MM-DD` + 类型(feat / fix / docs / chore)+ 要点 + 相关链接。
 > 纪律见 AGENTS.md「变更记录纪律」:发版前先更新本文件并随版本提交;事故复盘、复现与真机验证记录也记在这里。
 
+## v0.10.0 — 2026-10-11
+
+**类型**:feat(接入 dsh 0.2.1-alpha.2 的 `PromptContext.interpolate` 字段,机制级关闭指示文本的插值风险)。
+
+- **`interpolate: false`(全局 context 与子代理影子两处注册同步)**:dsh 0.2.1-alpha.2 的 system-prompt 给 `PromptContext` 新增可选字段 `interpolate`(默认 true);置 false 后本插件的指示文本**按字面渲染**,不再经过宿主提示词变量插值——而插值对未知 `{{...}}` 引用会在**任何模型请求之前抛错、终止整轮**(同款风险见 dsh-gitbash-shell [#16](https://github.com/KannaKuron/dsh-gitbash-shell/issues/16):persona suffix 引用已删除的 `{{cwd}}`)。此前 AGENTS 验证清单 3 的「注入文本无插值风险靠 BCP47 校验链保证」从**校验链防护**升级为**机制级关闭**;BCP47 校验链保留作纵深防御,仍是必须保持的不变量。
+- **向后兼容**:旧宿主(< 0.2.1-alpha.2)的 `PromptContext` 不认识该字段,注册对象多余字段无消费者、行为逐字节不变——不抬 `engines.dsh`、不动 peer range,与「运行时探测跨版本自愈」哲学一致。
+- 复核:CONTEXT_ORDERS 在 0.2.1-alpha.2 新增 `WORKING_DIRECTORY: 100`,仍未越过本插件的 order 125 槽位(不变量 9);`systemPrompt.context` 注册签名零变化;`minimal` 预设的封闭边界(不变量 2)不受影响——`interpolate` 只影响渲染方式,不改变 context 的可选性,**没有**加 `required: true`(那会穿透 `includeRuntimeContext: false` 的宿主级封闭,违背官方语义)。
+- 测试:smoke **46/46 全绿**。
+
 ## v0.9.2 — 2026-10-05
 
 **类型**:chore(清理 `dsh.client.inject` 里的死引用 `@deepseek-ai/dsh-client-runtime`)
