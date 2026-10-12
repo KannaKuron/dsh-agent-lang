@@ -553,6 +553,32 @@ test('client bundle: card receives scopes ONLY through the inject factory', () =
 
 // ── manifest consistency ─────────────────────────────────────────────────────
 
+test('client bundle: the card body folds into two HAND-DRAWN sections, collapsed by default', () => {
+  // The settings-card rework copies the dsh-gitbash-shell v0.38.4 pattern:
+  // sections are hand-drawn button+conditional pairs because the official
+  // disclosure component is unreachable through the plugin's restricted
+  // require (its icon lookup returns null there and a section built on it
+  // silently flattens into a title+stack pile). Two folds for four switches —
+  // the channels fold carries status/shortcuts/three channels, the audience
+  // fold reuses sub.title; the write-error line and the card-wide hint stay
+  // outside every fold.
+  assert.match(clientSource, /function fold\(titleKey\)/)
+  assert.match(clientSource, /var open = folds\[titleKey\] === true/)
+  assert.match(clientSource, /"aria-expanded": open \? "true" : "false"/)
+  assert.match(clientSource, /dl-foldHead/)
+  assert.match(clientSource, /dl-foldChevronOpen/)
+  assert.match(clientSource, /fold\("sec\.channels"/)
+  assert.match(clientSource, /fold\("sub\.title"/)
+  // hooks order: the fold state must be declared BEFORE the snapshot early
+  // return (snap.status can bail below it).
+  const cardBody = clientSource.slice(clientSource.indexOf('function DescLangCard'))
+  const hookAt = cardBody.indexOf('var foldsState = useState({})')
+  const bailAt = cardBody.indexOf('if (snap.status !== "ready") return null;')
+  assert.ok(hookAt >= 0 && bailAt > hookAt, 'foldsState must sit before the early return')
+  // an official disclosure component must not sneak back in as a render call
+  assert.doesNotMatch(clientSource, /E\(Disclosure/)
+})
+
 test('package manifest: client entry + dsh.client declaration', () => {
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
   assert.equal(pkg.name, 'dsh-agent-lang')

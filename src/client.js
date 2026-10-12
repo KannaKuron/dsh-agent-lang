@@ -8,11 +8,14 @@
  *      namespace via a bound `settingsScope`, so the Host-side prompt
  *      directives can localize even before the user ever picks a language.
  *   2. SETTINGS CARD — registers the Plugins page bundle-config card
- *      (plugins.bundle.config, keyed by the PACKAGE name). The card exposes The card exposes three
+ *      (plugins.bundle.config, keyed by the PACKAGE name). The card exposes three
  *      independently configured channels — tool-call descriptions, model
  *      thinking, user-facing replies — each auto (follow the GUI language) /
  *      force (a fixed BCP 47 tag) / off, plus one-click "sync all to GUI"
- *      and "turn all off" shortcuts.
+ *      and "turn all off" shortcuts. The body groups into two HAND-DRAWN
+ *      foldable sections (official DisclosureRow is unreachable through the
+ *      restricted require — the dsh-gitbash-shell v0.38.4 lesson), both
+ *      collapsed by default.
  *
  * SLOT REGISTRATION CONTRACT (verified against dsh-better-workspace 0.6.0,
  * live 2026-08-31): arbitrary objects do NOT reach the component through
@@ -131,6 +134,7 @@ window.__ModuleLoader__.load({
 		// dictionaries are not ours to ship.
 
 		var zh = {
+			"sec.channels": "语言通道",
 			"title": "语言控制",
 			"cardDesc": "工具描述、模型思考、回复输出——三个通道各自跟随界面语言或固定指定语言",
 			"mode.auto": "跟随界面语言",
@@ -154,6 +158,7 @@ window.__ModuleLoader__.load({
 		};
 
 		var en = {
+			"sec.channels": "Language channels",
 			"title": "Language Control",
 			"cardDesc": "Tool descriptions, model thinking, and replies — each follows the GUI language or a fixed one",
 			"mode.auto": "Follow GUI language",
@@ -183,6 +188,7 @@ window.__ModuleLoader__.load({
 		var LOCALES = {
 			/* locale: ar */
 			"ar": {
+				"sec.channels": "قنوات اللغة",
 				"title": "التحكم باللغة",
 				"cardDesc": "أوصاف الأدوات وتفكير النموذج والردود — ثلاث قنوات، كل واحدة تتبع لغة الواجهة أو لغة محددة",
 				"mode.auto": "اتّباع لغة الواجهة",
@@ -206,6 +212,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: de */
 			"de": {
+				"sec.channels": "Sprachkanäle",
 				"title": "Sprachsteuerung",
 				"cardDesc": "Tool-Beschreibungen, Denken des Modells und Antworten — drei Kanäle, jeder folgt der GUI-Sprache oder einer festen Sprache",
 				"mode.auto": "GUI-Sprache folgen",
@@ -229,6 +236,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: fr */
 			"fr": {
+				"sec.channels": "Canaux de langue",
 				"title": "Contrôle de la langue",
 				"cardDesc": "Descriptions d'outils, réflexion du modèle et réponses — trois canaux, chacun suit la langue de l'interface ou une langue fixe",
 				"mode.auto": "Suivre la langue de l'interface",
@@ -252,6 +260,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: hi */
 			"hi": {
+				"sec.channels": "भाषा चैनल",
 				"title": "भाषा नियंत्रण",
 				"cardDesc": "टूल विवरण, मॉडल की सोच और उत्तर — तीन चैनल, हर एक इंटरफ़ेस भाषा या तय भाषा का पालन करता है",
 				"mode.auto": "इंटरफ़ेस भाषा का पालन",
@@ -275,6 +284,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: id */
 			"id": {
+				"sec.channels": "Kanal bahasa",
 				"title": "Kontrol Bahasa",
 				"cardDesc": "Deskripsi alat, penalaran model, dan balasan — tiga kanal, masing-masing mengikuti bahasa antarmuka atau bahasa tetap",
 				"mode.auto": "Ikuti bahasa antarmuka",
@@ -298,6 +308,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: it */
 			"it": {
+				"sec.channels": "Canali linguistici",
 				"title": "Controllo lingua",
 				"cardDesc": "Descrizioni degli strumenti, ragionamento del modello e risposte — tre canali, ciascuno segue la lingua dell'interfaccia o una lingua fissa",
 				"mode.auto": "Segui la lingua dell'interfaccia",
@@ -321,6 +332,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: ja */
 			"ja": {
+				"sec.channels": "言語チャネル",
 				"title": "言語制御",
 				"cardDesc": "ツール説明・モデルの思考・回答をそれぞれGUI言語または指定言語で",
 				"mode.auto": "GUI言語に従う",
@@ -344,6 +356,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: ko */
 			"ko": {
+				"sec.channels": "언어 채널",
 				"title": "언어 제어",
 				"cardDesc": "도구 설명·모델 사고·응답을 각각 GUI 언어 또는 지정 언어로",
 				"mode.auto": "GUI 언어 따르기",
@@ -367,6 +380,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: nl */
 			"nl": {
+				"sec.channels": "Taalkanalen",
 				"title": "Taalbeheer",
 				"cardDesc": "Toolbeschrijvingen, denkwijze van het model en antwoorden — drie kanalen, elk volgt de interfacetaal of een vaste taal",
 				"mode.auto": "Interfacetaal volgen",
@@ -390,6 +404,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: pl */
 			"pl": {
+				"sec.channels": "Kanały językowe",
 				"title": "Sterowanie językiem",
 				"cardDesc": "Opisy narzędzi, rozumowanie modelu i odpowiedzi — trzy kanały, każdy podąża za językiem interfejsu lub ustalonym językiem",
 				"mode.auto": "Zgodnie z językiem interfejsu",
@@ -413,6 +428,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: pt */
 			"pt": {
+				"sec.channels": "Canais de idioma",
 				"title": "Controle de idioma",
 				"cardDesc": "Descrições de ferramentas, raciocínio do modelo e respostas — três canais, cada um segue o idioma da interface ou um idioma fixo",
 				"mode.auto": "Seguir o idioma da interface",
@@ -436,6 +452,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: ru */
 			"ru": {
+				"sec.channels": "Языковые каналы",
 				"title": "Управление языком",
 				"cardDesc": "Описания инструментов, рассуждения модели и ответы — три канала, каждый следует языку интерфейса или заданному языку",
 				"mode.auto": "Следовать языку интерфейса",
@@ -459,6 +476,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: sv */
 			"sv": {
+				"sec.channels": "Språkkanaler",
 				"title": "Språkstyrning",
 				"cardDesc": "Verktygsbeskrivningar, modellens resonemang och svar — tre kanaler, var och en följer gränssnittets språk eller ett fast språk",
 				"mode.auto": "Följ gränssnittets språk",
@@ -482,6 +500,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: th */
 			"th": {
+				"sec.channels": "ช่องทางภาษา",
 				"title": "ควบคุมภาษา",
 				"cardDesc": "คำอธิบายเครื่องมือ การคิดของโมเดล และคำตอบ — สามช่องทาง แต่ละช่องตามภาษาอินเทอร์เฟซหรือภาษาที่กำหนด",
 				"mode.auto": "ตามภาษาอินเทอร์เฟซ",
@@ -505,6 +524,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: tr */
 			"tr": {
+				"sec.channels": "Dil kanalları",
 				"title": "Dil Denetimi",
 				"cardDesc": "Araç açıklamaları, modelin düşünmesi ve yanıtlar — üç kanal; her biri arayüz dilini ya da sabit bir dili izler",
 				"mode.auto": "Arayüz dilini izle",
@@ -528,6 +548,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: vi */
 			"vi": {
+				"sec.channels": "Kênh ngôn ngữ",
 				"title": "Điều khiển ngôn ngữ",
 				"cardDesc": "Mô tả công cụ, suy nghĩ của mô hình và câu trả lời — ba kênh, mỗi kênh theo ngôn ngữ giao diện hoặc một ngôn ngữ cố định",
 				"mode.auto": "Theo ngôn ngữ giao diện",
@@ -551,6 +572,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: zh-hk */
 			"zh-hk": {
+				"sec.channels": "語言通道",
 				"title": "語言控制",
 				"cardDesc": "工具描述、模型思考、回覆輸出——三個通道各自跟隨介面語言或者指定語言",
 				"mode.auto": "跟隨介面語言",
@@ -574,6 +596,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: zh-mo */
 			"zh-mo": {
+				"sec.channels": "語言通道",
 				"title": "語言控制",
 				"cardDesc": "工具描述、模型思考、回覆輸出——三個通道各自跟隨介面語言或者指定語言",
 				"mode.auto": "跟隨介面語言",
@@ -597,6 +620,7 @@ window.__ModuleLoader__.load({
 			},
 			/* locale: zh-tw */
 			"zh-tw": {
+				"sec.channels": "語言通道",
 				"title": "語言控制",
 				"cardDesc": "工具描述、模型思考、回覆輸出——三個通道各自跟隨介面語言或指定語言",
 				"mode.auto": "跟隨介面語言",
@@ -713,6 +737,20 @@ window.__ModuleLoader__.load({
 			".dl-input:focus-visible{" + FOCUS_RING + ";outline-offset:1px}",
 			".dl-hint{margin:0;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-tertiary)}",
 			".dl-error{margin:0;font-size:12px;color:var(--dsw-alias-status-danger, #e5484d)}",
+			// Foldable sections (the settings-card rework): HAND-DRAWN, after the
+			// dsh-gitbash-shell v0.38.4 pattern. The official DisclosureRow is
+			// unreachable through this plugin's restricted require (the
+			// ui-primitives module shape it returns hides it and the icon lookup
+			// degrades to null), so an official component would silently flatten
+			// — never tried again.
+			".dl-fold{border:1px solid var(--dsw-alias-border-l2);border-radius:" + RADIUS_SM + ";padding:4px 12px 12px;background:var(--dsw-alias-bg-layer-1,transparent)}",
+			".dl-fold .dl-stack{padding-top:10px}",
+			".dl-foldHead{display:flex;align-items:center;gap:8px;width:100%;appearance:none;background:none;border:0;padding:6px 0;font:inherit;font-size:13px;font-weight:600;letter-spacing:.02em;color:var(--dsw-alias-label-secondary);cursor:pointer;text-align:left}",
+			".dl-foldHead:hover{color:var(--dsw-alias-label-primary)}",
+			".dl-foldHead:focus-visible{" + FOCUS_RING + ";outline-offset:1px}",
+			".dl-foldChevron{flex:none;display:inline-block;color:var(--dsw-alias-label-tertiary);transition:transform .16s}",
+			".dl-foldChevron.dl-foldChevronOpen{transform:rotate(90deg)}",
+			".dl-foldTitle{min-width:0;overflow-wrap:anywhere}",
 		].join("\n");
 
 		function ensureStyles() {
@@ -799,6 +837,22 @@ window.__ModuleLoader__.load({
 			var bumpTick = tickState[1];
 			void tick;
 
+			// The settings-card rework: the body is FOLDABLE SECTIONS, all
+			// collapsed by default — the user scans two labelled header rows and
+			// expands the one theme they recognise. State must sit before the
+			// early return (hooks order): snap.status can bail below.
+			var foldsState = useState({});
+			var folds = foldsState[0];
+			var setFolds = foldsState[1];
+			function toggleFold(key) {
+				setFolds(function (prev) {
+					var next = {};
+					for (var k in prev) next[k] = prev[k];
+					next[key] = !prev[key];
+					return next;
+				});
+			}
+
 			var scope = props.scope;
 			var localeScope = props.localeScope;
 
@@ -881,6 +935,33 @@ window.__ModuleLoader__.load({
 				{ id: "off", label: t("mode.off") },
 			];
 
+			// One FOLDABLE section, HAND-DRAWN (the dsh-gitbash-shell v0.38.4
+			// pattern). The official disclosure component was tried first over
+			// there and never rendered on the real machine: the ui-primitives
+			// module shape a plugin's restricted require returns does not expose
+			// it (the icon lookup comes back null), so every section silently
+			// degraded to a static title+stack pile. Self-drawing costs one
+			// button + one conditional: the header row is visible at all times,
+			// the body only while open, and every section stays collapsed by
+			// default.
+			function fold(titleKey) {
+				var body = [];
+				for (var i = 1; i < arguments.length; i++) body.push(arguments[i]);
+				var open = folds[titleKey] === true;
+				return E("div", { className: "dl-fold" },
+					E("button", {
+						type: "button",
+						className: "dl-foldHead",
+						"aria-expanded": open ? "true" : "false",
+						onClick: function () { toggleFold(titleKey); },
+					},
+						E("span", { className: "dl-foldChevron" + (open ? " dl-foldChevronOpen" : ""), "aria-hidden": "true" }, "▸"),
+						E("span", { className: "dl-foldTitle" }, t(titleKey)),
+					),
+					open ? E("div", { className: "dl-stack" }, body) : null,
+				);
+			}
+
 			function channelBlock(ch) {
 				return E("div", { key: ch.key, className: "dl-force" },
 					E("span", { className: "dl-chanLabel" }, ch.label + ": " + channelLabel(ch.m, ch.loc)),
@@ -944,46 +1025,58 @@ window.__ModuleLoader__.load({
 			// it off, mirroring the host half's subagentsEnabled().
 			var subOn = !(value.subagents === false || value.subagents === "false");
 
+			// The body groups into TWO folds (four switches total — no more
+			// sections than the content earns), both COLLAPSED by default:
+			// "sec.channels" holds the detection status, the one-click shortcuts
+			// and the three channel blocks; the audience switch folds under its
+			// existing "sub.title". The write-error line and the card-wide hint
+			// stay OUTSIDE the folds so they remain visible while everything is
+			// collapsed. Field names, write channels and defaults are untouched —
+			// this is a pure layout change.
 			var bodyContent = E("div", { className: "dl-body" },
-					E("div", { className: "dl-seg" },
-						E("button", {
-							type: "button",
-							className: "dl-segBtn",
-							onClick: function () { write({ mode: "auto", thinkMode: "auto", outMode: "auto" }); },
-						}, t("quick.syncAll")),
-						E("button", {
-							type: "button",
-							className: "dl-segBtn",
-							onClick: function () { write({ mode: "off", thinkMode: "off", outMode: "off" }); },
-						}, t("quick.offAll")),
-					),
-					E("div", { className: "dl-row" },
-						E("span", { className: "dl-rowLabel" }, t("chosen") + ":"),
-						E("span", { className: "dl-rowValue" }, chosen || t("none")),
-					),
-					E("div", { className: "dl-row" },
-						E("span", { className: "dl-rowLabel" }, t("reported") + ":"),
-						E("span", { className: "dl-rowValue" }, reported || t("none")),
-					),
-					channels.map(channelBlock),
-					// ── audience: two segments rather than a checkbox, matching
-					// the mode rows above (and reusing their focus/chrome rules).
-					E("div", { className: "dl-force" },
-						E("span", { className: "dl-chanLabel" }, t("sub.title") + ": " + (subOn ? t("sub.on") : t("sub.off"))),
+					fold("sec.channels",
 						E("div", { className: "dl-seg" },
 							E("button", {
 								type: "button",
-								className: "dl-segBtn" + (subOn ? " dl-segActive" : ""),
-								onClick: function () { write({ subagents: true }); },
-							}, t("sub.on")),
+								className: "dl-segBtn",
+								onClick: function () { write({ mode: "auto", thinkMode: "auto", outMode: "auto" }); },
+							}, t("quick.syncAll")),
 							E("button", {
 								type: "button",
-								className: "dl-segBtn" + (subOn ? "" : " dl-segActive"),
-								onClick: function () { write({ subagents: false }); },
-							}, t("sub.off")),
+								className: "dl-segBtn",
+								onClick: function () { write({ mode: "off", thinkMode: "off", outMode: "off" }); },
+							}, t("quick.offAll")),
 						),
+						E("div", { className: "dl-row" },
+							E("span", { className: "dl-rowLabel" }, t("chosen") + ":"),
+							E("span", { className: "dl-rowValue" }, chosen || t("none")),
+						),
+						E("div", { className: "dl-row" },
+							E("span", { className: "dl-rowLabel" }, t("reported") + ":"),
+							E("span", { className: "dl-rowValue" }, reported || t("none")),
+						),
+						channels.map(channelBlock),
 					),
-					E("p", { className: "dl-hint" }, t("sub.hint")),
+					fold("sub.title",
+						// ── audience: two segments rather than a checkbox, matching
+						// the mode rows above (and reusing their focus/chrome rules).
+						E("div", { className: "dl-force" },
+							E("span", { className: "dl-chanLabel" }, t("sub.title") + ": " + (subOn ? t("sub.on") : t("sub.off"))),
+							E("div", { className: "dl-seg" },
+								E("button", {
+									type: "button",
+									className: "dl-segBtn" + (subOn ? " dl-segActive" : ""),
+									onClick: function () { write({ subagents: true }); },
+								}, t("sub.on")),
+								E("button", {
+									type: "button",
+									className: "dl-segBtn" + (subOn ? "" : " dl-segActive"),
+									onClick: function () { write({ subagents: false }); },
+								}, t("sub.off")),
+							),
+						),
+						E("p", { className: "dl-hint" }, t("sub.hint")),
+					),
 					error ? E("p", { className: "dl-error" }, error) : null,
 					E("p", { className: "dl-hint" }, t("hint")),
 				);
