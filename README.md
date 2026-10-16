@@ -23,14 +23,14 @@ DSH 里每一次工具调用的 `description` 参数都是必填的,而且**原�
 | 智能体团队队员 / 普通子代理(v0.8.0) | ✅ **默认生效** | 队员与子代理的请求同样带上指示;设置里可切「仅主代理」。**fork 出的队员**会继承主代理已完成回合的历史快照(含已提交的指示),开关不重写历史 |
 | `minimal`(极简模式) | ❌(设计如此) | minimal 的 persona 是 `complete: true` 且压制 runtime context,提示词对一切后挂贡献者封闭——任何提示级插件都无法进入,需要产品侧改动 |
 
-## 与 dsh 0.2.1「description 前置」的关系(互补,零冲突)
+## 与 dsh 0.2.1 工具描述顺序指引的关系(互补,零冲突)
 
-dsh 0.2.1 起,官方把 `description` 参数的说明排到了 `bash` / `pwsh` / `run_code` 工具 schema 的**最前面**(「Provide `description` before `command` in the arguments」;run_code 的参数说明也改为先 `description` 后 `code`),并让 UI 在工具调用的**准备阶段**就渲染已到达的描述。这两件事与本插件正交且互补:
+dsh 0.2.1 起,`bash` / `pwsh` 工具 schema 带着「Provide `description` before `command` in the arguments」指引,让 UI 在工具调用的**准备阶段**就渲染已到达的描述(`run_code` 在 alpha.3~alpha.4 曾同样把 `description` 排到最前,alpha.5 反转回 `code` 在前并删去对应指引句)。这与本插件正交且互补:
 
 - **官方管「顺序」**:引导模型先发 description,准备阶段的调用卡片就有标题可渲染;
 - **本插件管「语言」**:同一条 runtime-context 指示决定这些描述(含准备阶段标题)用什么语言书写。
 
-官方 schema 里的英文示例措辞没有变,「界面中文、描述英文」的落差依旧由本插件的描述通道补齐。新工具(如 0.2.1 的 `schedule_*` 提醒工具)的调用描述同样自动受控:通道是全局的,按工具调用的 `description` 参数生效,与工具清单增减无关。已对 dsh 0.2.1-alpha.1 复核:`systemPrompt.context` 签名与 `CONTEXT_ORDERS`(110/115/120)零变化,order 125 依然安全。
+官方 schema 里的英文示例措辞没有变,「界面中文、描述英文」的落差依旧由本插件的描述通道补齐。新工具(如 0.2.1 的 `schedule_*` 提醒工具)的调用描述同样自动受控:通道是全局的,按工具调用的 `description` 参数生效,与工具清单增减无关。已对 dsh 0.2.1-alpha.5 复核:`systemPrompt.context` 签名零变化;`CONTEXT_ORDERS` 新增 `TEAM_IDENTITY: 125`(0.2.1-alpha.3),本插件槽位已随之从 125 迁至 130(v0.12.0)。
 
 ## 工作原理
 
@@ -84,7 +84,7 @@ pnpm add <tarball 路径>          # package.json 的 dsh.bundle.patch 声明会
 
 **dsh 0.1.7-rc.2 与 rc.1 已在隔离实例上逐项复核通过**(rc.2 的核对记录、逐面零 diff 依据与真机证据见 CHANGELOG v0.7.1,rc.1 见 v0.7.0);0.1.6-alpha.1 的核对记录见 CHANGELOG v0.4.3:
 
-- `systemPrompt.context()` 契约未变:`PromptContext` 仍是 `{ name, order, text }`,order 125 仍在官方 CONTEXT_ORDERS 之后;`interpolate: false` 只作用于 **sections**,本插件不用。
+- `systemPrompt.context()` 契约未变:`PromptContext` 仍是 `{ name, order, text }`,order 125(0.2.1-alpha.3 官方占号后已迁 130,见 v0.12.0)仍在官方 CONTEXT_ORDERS 之后;`interpolate: false` 只作用于 **sections**,本插件不用。
 - 注入文本不存在 `{{...}}` 插值风险:三条语言来源(强制标签 / 设置里的显式选择 / 浏览器上报)全部经 BCP47 校验后才进入文本。
 - 设置面仍在 0.1.7 分界:0.1.7 起是「行 `Config` + `configForms`」,0.1.6 及以前是注册命名空间;设置卡两个座位照旧——`settings.plugin.item`(≤0.1.6 宿主;0.1.7 上无 owner,静默挂起)与 `plugins.bundle.config`(按包名 key,0.1.6-alpha.2 起,0.1.7 上实际生效)。
 - 插件清单声明了 dsh 0.1.7-rc.1 起强制执行的兼容 peer:`"@deepseek-ai/dsh": ">=0.1.0"`(标为 optional,避免包管理器把只有预发布版本的 `@deepseek-ai/dsh` 拉进安装)。该声明让本插件真正被兼容门禁覆盖(此前没有任何这类 peer,等于永不被校验),同时**不设上界**:插件靠运行时探测跨版本自愈,未来 dsh 升级不会被自动停用。

@@ -50,7 +50,7 @@
 7. **词典纪律(21 门语言)**:NS = agentLang;`zh` / `en` 是文件内的两本基础词典,其余 **19 门第三语言**在 `LOCALES` 表里一门一条(每条前一行 `/* locale: <tag> */` 标记;繁体三门 `zh-hk` / `zh-mo` / `zh-tw`,其中 zh-mo 与 zh-hk 同文)。注册表按**精确 id** 查表,不会替我们把 `zh-Hant-*` 折到港式,因此 `LOCALE_ALIASES` 把宏标签 `zh-hant` / `zh-hans` 指到同一批词典对象上(引用而非副本,没有第二本要对齐);区域 id 靠语言包自己的 fallback 链走到别名。**每本词典的 key 必须与 `zh` 完全相等**——缺键只会静默回退英文,卡片就成半翻译状态——冒烟测试 `every shipped dictionary carries the same key set as zh` 按标记切片逐门比对,另一条锁定 19 个 tag 的完整清单。加一门语言 = 在 `LOCALES` 追加一个带标记的条目再跑测试,不改任何逻辑:注册是一次 `ctx.locale.register(DICT_NS, Object.assign({}, LOCALE_ALIASES, LOCALES))`,表里有什么就发布什么,不可能漏注册。语言自称映射(共 21 条,含 en)host/client 各一份,冒烟测试比对两边集合,改要同步。
    词典只在语言包(`ctx.locale.addLanguage`,如 dsh-i18n)把该 tag 注册进 catalog 后才可能成为 active——**本插件不自己 addLanguage**:那会把半翻译语言塞进 设置 → 通用 → 语言 的选择器。
 8. **React 纪律**:纯 React.createElement;组件定义在模块层(内联定义会在父渲染时重挂载);所有 hooks 先于任何 early return;primitives 图标经**候选链**特征探测降级(`firstIcon([...])`,逐个试到命中为止,全不命中回退文本 ▾)——**不要赌单个拼写**:v0.1.0…v0.7.0 一直探测的 `IconChevronDownOutline14` 在 0.1.7 的 rc.1/rc.2 里根本不存在(官方家族是 `…OutlineRegular`/`…OutlineMedium`),于是图标静默消失、只剩文字,缺陷还不可见(见 CHANGELOG v0.7.1;v0.4.3 的旧结论是误判)。
-9. **context order 125** 是自由槽位,排在官方 CONTEXT_ORDERS(SANDBOX_POLICY 110 / APPROVAL_POLICY 115 / SUBAGENT_DELEGATION 120)之后;若官方表扩张越过 125,换一个空闲数。
+9. **context order 130** 是自由槽位(v0.12.0 前为 125;dsh 0.2.1-alpha.3 官方新增 `TEAM_IDENTITY: 125` 撞号后迁移),排在官方 CONTEXT_ORDERS 的策略邻区(WORKING_DIRECTORY 100 / SANDBOX_POLICY 110 / APPROVAL_POLICY 115 / SUBAGENT_DELEGATION 120 / TEAM_IDENTITY 125;其后是 HARNESS_SOURCE 200 / WEB_SURFACE 210);若官方表扩张越过 130,换一个空闲数。
 10. **slot 注册 options 的顶层字段不会传给组件**(2026-08-31 实测:首版把 scope/localeScope 放顶层,组件 props.scope 为 undefined,useSyncExternalStore(undefined.subscribe) 渲染即崩,卡片无声消失而上报链路照常)。只有协议字段生效:`locale` 绑 t、`store` 绑 store seat、**`inject` 工厂返回的成员按原名成为 props**(hooks 子对象绑成 useXxx)。传对象一律走 inject 工厂;组件外再包 QuietBoundary(渲染失败只废本卡)。对照范本:已安装的 dsh-better-workspace 0.6.0(sandbox 里的开发副本可能滞后,以 profile node_modules 里实际装的版本为准)。
 11. **host 半读未声明服务必须 `ctx.get('name')`**:`ctx.inject(['systemPrompt'], (pctx) => ...)` 的 pctx 只有声明过的服务可作属性访问,`pctx.settings?.get?.(...)` 这种未声明属性读取**静默 undefined**(可选链连错都不报),指示因此永远空文本(2026-08-31 实测:卡片/上报全正常但指示从未注入,agent 描述依旧英文)。测试已锁定 `pctx.get('settings')` 形态。
 12. **强制语言下拉选项三来源、去重优先级递减**(v0.4.1):已存自定义 tag(保可见)> **locale 快照的已注册语言**(`ctx.locale.getSnapshot().locales`,经 inject 工厂 `selectableLocales` 喂入组件;任何语言包插件经 `ctx.locale.addLanguage` 注册的语言——如 dsh-i18n——**自然并入并置前,无需本插件感知具体包**)> 静态 LANG_OPTIONS 兜底(未装任何包时依旧可用)。feed 缺失/异常一律降级为静态列表;选项 label 用语言包自带 label(缺失回退 id)。
@@ -60,10 +60,10 @@
 
 ## 验证清单(改动后)
 
-1. `npm test` 全绿(46 项)。
+1. `npm test` 全绿(47 项)。
 2. 真机(隔离实例:`DSH_HOME=<tmp> dsh --profile <probe> --no-open --port <port>`;0.1.7 起 profile 自带 app,**不要再写 `web` 子命令**,否则 `too many arguments`)。
    - 0.1.7+ 时代:界面语言上报落在 profile 的 `cordis.patch.yml` 用户层(`- id: agent-lang` + `config.uiLocale`);设置卡片在侧边栏「插件」面板 → 本插件的 bundle 详情页(v0.9.0 起只注册这一个座位)。
    - ≤0.1.6 时代:设置 → 通用 页面出现 `agent-lang:` 命名空间段。
    - 语言注入链路(真实请求级证据,不依赖真模型):把 `llm-deepseek` 的 `baseURL` 指向本地 stub(Anthropic Messages SSE),`dsh --profile <headless probe> "<task>"` 跑一轮,在 stub 抓到的请求体里核对注入文本;`mode off`/未检测到语言时必须**没有**任何语言指示。
    - `minimal` 模式:确认不注入(设计边界)。
-3. 升级 dsh 后复核:`plugins.bundle.config` slot 契约与 `SettingsScope` 接口(ui-settings 的 settings-contract.ts)、`systemPrompt.context` 签名(system-prompt)、CONTEXT_ORDERS 表是否越过 125。**2026-09-15 已对 dsh 0.1.6-alpha.1 复核通过**;**2026-09-23 已对 dsh 0.1.7-rc.1 复核通过**(逐项结论与真机证据见 CHANGELOG v0.7.0);**2026-09-25 已对 dsh 0.1.7-rc.2 复核通过**(rc.1↔rc.2 逐面零 diff 依据、设计令牌跟进与图标修复见 CHANGELOG v0.7.1)。另确认注入文本**无 `{{...}}` 插值风险**——渲染期插值对 malformed / unknown 引用会抛错,而三条语言来源全程经 `BCP47.test()` 校验,这条校验链是必须保持的不变量(记录见 CHANGELOG v0.4.3)。
+3. 升级 dsh 后复核:`plugins.bundle.config` slot 契约与 `SettingsScope` 接口(ui-settings 的 settings-contract.ts)、`systemPrompt.context` 签名(system-prompt)、CONTEXT_ORDERS 表是否越过 130。**2026-09-15 已对 dsh 0.1.6-alpha.1 复核通过**;**2026-09-23 已对 dsh 0.1.7-rc.1 复核通过**(逐项结论与真机证据见 CHANGELOG v0.7.0);**2026-09-25 已对 dsh 0.1.7-rc.2 复核通过**(rc.1↔rc.2 逐面零 diff 依据、设计令牌跟进与图标修复见 CHANGELOG v0.7.1);**2026-10-17 已对 dsh 0.2.1-alpha.5 复核通过**(`TEAM_IDENTITY: 125` 撞号 → order 迁 130、描述顺序指引现状更正,见 CHANGELOG v0.12.0)。另确认注入文本**无 `{{...}}` 插值风险**——渲染期插值对 malformed / unknown 引用会抛错,而三条语言来源全程经 `BCP47.test()` 校验,这条校验链是必须保持的不变量(记录见 CHANGELOG v0.4.3)。

@@ -3,6 +3,15 @@
 > 倒序排列,新版本条目在最上面。条目格式:`## vX.Y.Z — YYYY-MM-DD` + 类型(feat / fix / docs / chore)+ 要点 + 相关链接。
 > 纪律见 AGENTS.md「变更记录纪律」:发版前先更新本文件并随版本提交;事故复盘、复现与真机验证记录也记在这里。
 
+## v0.12.0 — 2026-10-17
+
+**类型**:feat(跟进 dsh 0.2.1-alpha.3..5:`CONTEXT_ORDER` 125 → 130 迁移;附带 docs 更正)。
+
+- **`CONTEXT_ORDER` 125 → 130**(全局注册与子代理影子共用同一常量,`src/index.js` 单点迁移):dsh 0.2.1-alpha.3 给官方 `CONTEXT_ORDERS` 新增 `TEAM_IDENTITY: 125`(agent teams 身份行,`packages/core/system-prompt/src/index.ts:175`),与本插件的自由槽位撞号——重名才 throw、撞号不崩,但本插件的「语言策略」指示会与「队员身份」行按 order 交错。迁到 130,继续紧贴官方策略邻区(SANDBOX_POLICY 110 / APPROVAL_POLICY 115 / SUBAGENT_DELEGATION 120 / TEAM_IDENTITY 125 之后、HARNESS_SOURCE 200 之前);JSDoc 同步。不变量 9 的「官方表越过就换空闲数」触发条件首次命中,AGENTS 不变量与验证清单同步改写。
+- **复核(对 dsh 0.2.1-alpha.5)**:`systemPrompt.context` 注册签名零变化;`PromptContext.interpolate`(v0.10.0 接入)零变化;`plugins.bundle.config` 座位契约零 diff;`minimal` 封闭边界不变;alpha.4 起 engines.dsh 门禁对本插件开放式下界 `>=0.1.6-alpha.2` 无阻断(engines / peer range 不动)。
+- **docs 更正**:v0.9.1 记录的「官方把 description 排到参数说明最前」在 alpha.5 只剩一半——`bash`/`pwsh` 保留「Provide `description` before `command`」(`tool-bash/src/index.ts:95`、`tool-pwsh/src/index.ts:130`),`run_code` 反转回 `code` 在前并删去指引句(`ptc.spec.ts:473` 断言不含);README(中英)对应小节改写,v0.9.1 条目追加更正注。本插件是纯翻译通道,不受参数顺序影响。
+- 测试:smoke 槽位断言 125 → 130,47 项全绿。
+
 ## v0.11.0 — 2026-10-13
 
 **类型**:feat(设置卡可折叠分区;家族跟进 dsh-gitbash-shell v0.38.4 已验收形态)。
@@ -38,6 +47,7 @@
 - **对 dsh 0.2.1-alpha.1 逐项复核通过(零适配需求)**:`systemPrompt.context` 签名与 `CONTEXT_ORDERS` 常量表(SANDBOX_POLICY 110 / APPROVAL_POLICY 115 / SUBAGENT_DELEGATION 120)在 0.2.0-rc.2 → 0.2.1-alpha.1 间**零变化**(system-prompt 包 src 仅删 invariant 附属物),order 125 依然安全;`plugins.bundle.config` 座位与 `configForms` 契约无变化;注入文本无 `{{...}}` 插值风险(BCP47 校验链不变)。
 - **官方 0.2.1 把 `description` 排到参数说明最前**(`bash`/`pwsh` 加「Provide `description` before `command` in the arguments」;`run_code` 的参数说明改为先 `description` 后 `code`),并让 UI 在**准备阶段**渲染已到达的描述——README(中英)新增一节说明两者正交互补:官方管顺序(准备阶段卡片有标题),本插件管语言(标题用什么语言写);官方 schema 的英文示例措辞未变,语言落差依旧由描述通道补齐;新工具(0.2.1 的 `schedule_*`)的描述自动受控。
 - 相关:[dsh v0.2.1-alpha.1 release notes](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.1-alpha.1)。
+- **更正(v0.12.0)**:0.2.1-alpha.5 把 `run_code` 的参数说明反转回 `code` 在前并删去「Provide `description` before `code`」指引(`bash`/`pwsh` 的「description before `command`」保留)——上文「run_code 的参数说明改为先 `description` 后 `code`」自 alpha.5 起不再成立;本插件是纯翻译通道,不受参数顺序影响。
 
 ## v0.9.0 — 2026-09-28
 

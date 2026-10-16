@@ -138,12 +138,12 @@ const CONTEXT_NAME = 'agent-lang:ui-language'
 
 /**
  * Slot after the centrally allocated CONTEXT_ORDERS entries (SANDBOX_POLICY
- * 110, APPROVAL_POLICY 115, SUBAGENT_DELEGATION 120): the language fact
- * reads as a runtime policy like its neighbors. See dsh-system-prompt's
- * CONTEXT_ORDERS table; pick a different free number if that table grows
- * past 125.
+ * 110, APPROVAL_POLICY 115, SUBAGENT_DELEGATION 120, TEAM_IDENTITY 125):
+ * the language fact reads as a runtime policy like its neighbors. See
+ * dsh-system-prompt's CONTEXT_ORDERS table; pick a different free number if
+ * that table grows past 130.
  */
-const CONTEXT_ORDER = 125
+const CONTEXT_ORDER = 130
 
 /** Same grammar as the built-in locale ids (BCP 47-style). */
 const BCP47 = /^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$/u

@@ -73,8 +73,9 @@ test('plugin shape: name, no hard injects, namespace constants', () => {
 
 test('context placement: free slot after the centrally allocated orders', () => {
   assert.equal(CONTEXT_NAME, 'agent-lang:ui-language')
-  // After SANDBOX_POLICY(110)/APPROVAL_POLICY(115)/SUBAGENT_DELEGATION(120).
-  assert.equal(CONTEXT_ORDER, 125)
+  // After SANDBOX_POLICY(110)/APPROVAL_POLICY(115)/SUBAGENT_DELEGATION(120)
+  // and TEAM_IDENTITY(125, allocated by dsh 0.2.1-alpha.3).
+  assert.equal(CONTEXT_ORDER, 130)
 })
 
 // ── language resolution ──────────────────────────────────────────────────────

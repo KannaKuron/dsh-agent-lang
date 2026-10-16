@@ -49,7 +49,7 @@ Plain JS, no build step, no installed dependencies (schemastery is a peer resolv
 
 **dsh 0.1.7-rc.2 and rc.1 were checked item by item on a real isolated instance** (rc.2 record, per-surface zero-diff evidence and live evidence: CHANGELOG v0.7.1; rc.1: v0.7.0); the same holds for 0.1.6-alpha.1 (CHANGELOG v0.4.3):
 
-- The `systemPrompt.context()` contract is unchanged: `PromptContext` is still `{ name, order, text }`, with order 125 still after the official CONTEXT_ORDERS. The `interpolate: false` flag applies to **sections** only, which this plugin does not use.
+- The `systemPrompt.context()` contract is unchanged: `PromptContext` is still `{ name, order, text }`, with order 125 (moved to 130 after the official table claimed 125, see v0.12.0) still after the official CONTEXT_ORDERS. The `interpolate: false` flag applies to **sections** only, which this plugin does not use.
 - The injected text carries no `{{...}}` interpolation risk: every language source (forced tag, explicit setting, browser report) passes BCP47 validation before it reaches the text.
 - The settings surface still splits at 0.1.7 (row `Config` + `configForms` above it, the registered namespace below), and the settings card still ships both seats: `settings.plugin.item` (hosts ≤ 0.1.6, where it silently waits on 0.1.7+) and `plugins.bundle.config` keyed by the package name (0.1.6-alpha.2+, live on 0.1.7).
 - The manifest declares the compatibility peer dsh 0.1.7-rc.1 enforces — `"@deepseek-ai/dsh": ">=0.1.0"` (optional, so package managers never auto-install a prerelease-only package). The declaration puts this plugin under the gate (it carried no such peer before, so it was never validated) while leaving the range open-ended: the plugin adapts to host changes by runtime detection, so a future dsh upgrade never disables it silently.
@@ -57,12 +57,12 @@ Plain JS, no build step, no installed dependencies (schemastery is a peer resolv
 
 ## Relation to dsh 0.2.1's "description first" wording (complementary, zero conflict)
 
-Since dsh 0.2.1 the official tool schemas put the `description` parameter explanation FIRST for `bash` / `pwsh` / `run_code` ("Provide `description` before `command` in the arguments"; run_code's parameter wording now lists `description` before `code`), and the UI renders an arrived description already during a call's preparing phase. Both changes are orthogonal to this plugin and complementary:
+Since dsh 0.2.1 the `bash` / `pwsh` tool schemas carry the "Provide `description` before `command` in the arguments" guidance, so the UI renders an arrived description already during a call's preparing phase (`run_code` front-loaded `description` in alpha.3–alpha.4 as well; alpha.5 reverted it to `code` first and dropped the sentence). This is orthogonal to this plugin and complementary:
 
 - **the host owns the order**: nudging the model to send the description first, so the preparing-phase card has a title to render;
 - **this plugin owns the language**: the same runtime-context directive decides which language those descriptions (preparing-phase titles included) are written in.
 
-The official English example wording in the schemas is unchanged, so the "Chinese UI, English descriptions" gap is still this plugin's description channel to close. Calls to new tools (0.2.1's `schedule_*` reminder tools included) are covered automatically: the channel is global and keys off the call's `description` argument, independent of tool-list churn. Re-verified against dsh 0.2.1-alpha.1: the `systemPrompt.context` signature and `CONTEXT_ORDERS` (110/115/120) are byte-identical, order 125 stays safe.
+The official English example wording in the schemas is unchanged, so the "Chinese UI, English descriptions" gap is still this plugin's description channel to close. Calls to new tools (0.2.1's `schedule_*` reminder tools included) are covered automatically: the channel is global and keys off the call's `description` argument, independent of tool-list churn. Re-verified against dsh 0.2.1-alpha.5: the `systemPrompt.context` signature is unchanged, and `CONTEXT_ORDERS` gained `TEAM_IDENTITY: 125` (0.2.1-alpha.3) — this plugin's slot moved from 125 to 130 (v0.12.0).
 
 ## Known limits
 
