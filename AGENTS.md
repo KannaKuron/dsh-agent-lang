@@ -14,6 +14,13 @@
 
 - **发布事故处置(2026-08-31,v0.3.1 实际教训)**:workflow 文件在发布周期内被「删除→恢复」或仓库 Actions 被 toggle 后,GitHub 会要求**文件内容发生变化**才重新注册(re-touch 无内容变化的 commit 无效),且**半激活期创建的 run 会永久卡 queued(连 job 都不生成,jobs = 0 是铁证)**——事件流有 ReleaseEvent 但 actions/runs total_count 为 0 = 事件根本没触发 workflow。处置:① 修改 workflow(内容变化,如加 `workflow_dispatch:`)并 push;② `gh run cancel` 作废卡死的 queued run;③ 重新 `gh workflow run` 手动触发(本 workflow 已带 `workflow_dispatch`,应急补发不需要再发假 release);④ 跑绿后 `npm view <pkg> version --registry=https://registry.npmjs.org` 确认 → npmmirror 同步。诊断命令:`gh run list --repo <repo> --limit 5`、`gh api repos/<repo>/actions/runs --jq .total_count`(0 = 从未触发)、`gh run view <id> --json status,conclusion`。
 
+## 适配分支纪律(2026-10-30 起)
+
+- 每轮适配 dsh 新版本,都从最新 `main` 开分支 `alpha适配`;本轮所有适配改动只提交到该分支,不直接推 `main`。
+- 在该分支跑完 `npm test` 与隔离实例真机验证,确认没问题后再合并回 `main`、再发版本。
+- 下一轮适配重新从 `main` 开同名 `alpha适配` 分支,不复用上一轮的分支;已合并的旧分支可删。
+- 本纪律与各仓库的「变更记录纪律」并列:CHANGELOG 记录改了什么,分支记录这一轮改动的边界。
+
 ## 变更记录纪律(2026-09-13 起)
 
 - **所有版本发布、修复、事故复盘、复现/验证记录一律写进本仓库 `CHANGELOG.md`**,不再追加进本文件;
