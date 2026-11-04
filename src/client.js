@@ -4,18 +4,17 @@
  * Two jobs:
  *   1. REPORTER — pushes the locale runtime's ACTIVE locale (the explicit
  *      Settings→General choice OR the browser navigator match, whatever the
- *      GUI is actually showing) into the Host's `agent-lang` settings
- *      namespace via a bound `settingsScope`, so the Host-side prompt
- *      directives can localize even before the user ever picks a language.
+ *      GUI is actually showing) into this plugin's row Config (`agent-lang`)
+ *      through the `configForms` service, so the Host-side prompt directives
+ *      can localize even before the user ever picks a language.
  *   2. SETTINGS CARD — registers the Plugins page bundle-config card
  *      (plugins.bundle.config, keyed by the PACKAGE name). The card exposes three
  *      independently configured channels — tool-call descriptions, model
  *      thinking, user-facing replies — each auto (follow the GUI language) /
  *      force (a fixed BCP 47 tag) / off, plus one-click "sync all to GUI"
  *      and "turn all off" shortcuts. The body groups into two HAND-DRAWN
- *      foldable sections (official DisclosureRow is unreachable through the
- *      restricted require — the dsh-gitbash-shell v0.38.4 lesson), both
- *      collapsed by default.
+ *      foldable sections (kept local so the card needs no extra primitives
+ *      dependency), both collapsed by default.
  *
  * SLOT REGISTRATION CONTRACT (verified against dsh-better-workspace 0.6.0,
  * live 2026-08-31): arbitrary objects do NOT reach the component through
@@ -23,19 +22,19 @@
  * binds the `t` seat, `store` binds a store seat, and an `inject` FACTORY's
  * returned members become props: plain members by their own name, a `hooks`
  * sub-object's members as useXxx hooks). This bundle passes the bound
- * settings scopes through an `inject` factory as PLAIN members; the card
+ * Config forms through an `inject` factory as PLAIN members; the card
  * reads them via getSnapshot() per render and refreshes with a local tick
  * after each write (no useSyncExternalStore: a scope passed this way has no
  * hook adapter).
  *
  * Hand-written bundle rules (no build step in this repo):
  *   - ONE window.__ModuleLoader__.load({...}) call, id = package name;
- *   - `require` restricted to the client-module BASELINE whitelist:
- *     react and @deepseek-ai/dsh-client-ui-primitives only (smoke-enforced);
+ *   - `require` restricted to the client-module BASELINE whitelist: react
+ *     only (smoke-enforced);
  *   - plain React.createElement, no JSX/TS; components defined at module
  *     level so parent re-renders never remount them;
  *   - `dsh.client.inject` in package.json lists the packages that must load
- *     first so `locale` / `settingsScope` / `slots` exist when this applies.
+ *     first so `locale` / `slots` / `configForms` exist when this applies.
  */
 window.__ModuleLoader__.load({
 	id: "dsh-agent-lang",
@@ -45,7 +44,6 @@ window.__ModuleLoader__.load({
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 
 		var React = require("react");
-		var ui = require("@deepseek-ai/dsh-client-ui-primitives");
 
 		var E = React.createElement;
 		var useState = React.useState;
@@ -693,35 +691,26 @@ window.__ModuleLoader__.load({
 
 		// ── styles (dl- prefixed; tokens mirror the official card chrome) ───────
 
-		/* dsh 0.1.7-rc.2 shipped the unified design-token layer this card now
-		   consumes: `--dsw-radius-xs/sm/md/lg/xl/panel` (ui-theme styles/base.css)
-		   and the one focus ring every component declares —
-		   `--dsw-focus-ring-width` + `--dsw-focus-ring-color`
-		   (ui-theme styles/focus.css, which also blanks the colour under pointer
-		   modality). Each var() carries the literal this file used before, so a
-		   host that predates the tokens renders exactly what it rendered then;
-		   the focus colour keeps the old `brand-primary` as its last fallback
-		   because the newer `state-business-primary` may not exist on <=0.1.6. */
-		var RADIUS_MD = "var(--dsw-radius-md,12px)";
-		var RADIUS_SM = "var(--dsw-radius-sm,8px)";
-		var FOCUS_RING = "outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary,var(--dsw-alias-brand-primary)))";
+		/* Design tokens from the current ui-theme layer:
+		   `--dsw-radius-xs/sm/md/lg/xl/panel` (styles/base.css) and the one focus
+		   ring every component declares — `--dsw-focus-ring-width` +
+		   `--dsw-focus-ring-color` (styles/focus.css, which also blanks the
+		   colour under pointer modality). */
+		var RADIUS_MD = "var(--dsw-radius-md)";
+		var RADIUS_SM = "var(--dsw-radius-sm)";
+		var FOCUS_RING = "outline:var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color)";
 
 		var STYLE_ID = "dsh-agent-lang-style";
 
 		var CSS = [
 			".dl-card{list-style:none;border:1px solid var(--dsw-alias-border-l2);border-radius:" + RADIUS_MD + ";background:var(--dsw-alias-bg-layer-3);-webkit-backdrop-filter:var(--dsh-any-blur-card-panels,blur(12px) saturate(1.15));backdrop-filter:var(--dsh-any-blur-card-panels,blur(12px) saturate(1.15));transition:border-color .16s,background .16s}",
 			".dl-card:hover{border-color:var(--dsw-alias-label-dimmed)}",
-			".dl-card.dl-open{background:var(--dsw-alias-bg-layer-2);border-color:var(--dsw-alias-label-dimmed)}",
-			".dl-header{width:100%;appearance:none;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:" + RADIUS_MD + "}",
-			".dl-header:focus-visible{" + FOCUS_RING + ";outline-offset:-2px}",
+			".dl-header{display:flex;align-items:center;gap:12px;padding:14px 16px}",
 			".dl-headText{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}",
 			".dl-name{font-size:15px;font-weight:600;line-height:1.4;color:var(--dsw-alias-label-primary)}",
 			".dl-desc{font-size:13px;line-height:1.5;color:var(--dsw-alias-label-tertiary)}",
-			".dl-chevron{flex:none;color:var(--dsw-alias-label-tertiary);transition:transform .16s}",
-			".dl-chevron.dl-chevronOpen{transform:rotate(180deg)}",
 			".dl-body{display:flex;flex-direction:column;gap:12px;padding:4px 16px 16px;max-width:640px}",
 			".dl-pageCard{max-width:640px}",
-			".dl-headerFlat{cursor:default}",
 			".dl-pageBody{display:flex;flex-direction:column;gap:12px;padding:0 0 8px}",
 			".dl-row{display:flex;align-items:baseline;gap:8px;font-size:13px;line-height:1.5;color:var(--dsw-alias-label-secondary)}",
 			".dl-rowLabel{flex:none;color:var(--dsw-alias-label-tertiary)}",
@@ -737,13 +726,10 @@ window.__ModuleLoader__.load({
 			".dl-input:focus-visible{" + FOCUS_RING + ";outline-offset:1px}",
 			".dl-hint{margin:0;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-tertiary)}",
 			".dl-error{margin:0;font-size:12px;color:var(--dsw-alias-status-danger, #e5484d)}",
-			// Foldable sections (the settings-card rework): HAND-DRAWN, after the
-			// dsh-gitbash-shell v0.38.4 pattern. The official DisclosureRow is
-			// unreachable through this plugin's restricted require (the
-			// ui-primitives module shape it returns hides it and the icon lookup
-			// degrades to null), so an official component would silently flatten
-			// — never tried again.
-			".dl-fold{border:1px solid var(--dsw-alias-border-l2);border-radius:" + RADIUS_SM + ";padding:4px 12px 12px;background:var(--dsw-alias-bg-layer-1,transparent)}",
+			// Foldable sections (the settings-card rework): HAND-DRAWN on purpose,
+			// so the card keeps its single `react` require and needs no extra
+			// primitives dependency.
+			".dl-fold{border:1px solid var(--dsw-alias-border-l2);border-radius:" + RADIUS_SM + ";padding:4px 12px 12px;background:var(--dsw-alias-bg-layer-1)}",
 			".dl-fold .dl-stack{padding-top:10px}",
 			".dl-foldHead{display:flex;align-items:center;gap:8px;width:100%;appearance:none;background:none;border:0;padding:6px 0;font:inherit;font-size:13px;font-weight:600;letter-spacing:.02em;color:var(--dsw-alias-label-secondary);cursor:pointer;text-align:left}",
 			".dl-foldHead:hover{color:var(--dsw-alias-label-primary)}",
@@ -771,32 +757,6 @@ window.__ModuleLoader__.load({
 			}
 		}
 
-		/** Defensive primitives lookup: an unknown icon name degrades to the next
-		    candidate, and an empty chain to the text chevron. */
-		function icon(name) {
-			try {
-				var component = ui && ui[name];
-				return typeof component === "function" ? component : null;
-			} catch (error) {
-				return null;
-			}
-		}
-
-		/** The first primitive among the candidate names that this host exports.
-		    The glyph names are part of no contract this plugin can pin: the
-		    `IconChevronDownOutline14` spelling this card used since v0.1.0 is
-		    exported by NO 0.1.7 build (rc.1/rc.2 export the weight-suffixed
-		    `…Regular`/`…Medium` family), so the probe silently fell back to the
-		    text "▾" — the candidate chain is what keeps a real icon on hosts that
-		    ship one and the text glyph on hosts that do not. */
-		function firstIcon(names) {
-			for (var index = 0; index < names.length; index += 1) {
-				var component = icon(names[index]);
-				if (component) return component;
-			}
-			return null;
-		}
-
 		// ── error boundary (the dsh-better-workspace QuietBoundary pattern) ──────
 
 		/** A render failure degrades THIS card, never the settings page. */
@@ -816,17 +776,13 @@ window.__ModuleLoader__.load({
 		// ── settings card (module-level component) ───────────────────────────────
 
 		/**
-		 * The Settings → Plugins card. `t` arrives through the registration's
+		 * The Plugins-panel bundle-config card. `t` arrives through the registration's
 		 * `locale` field; `scope`/`localeScope` arrive as PLAIN props from the
 		 * `inject` factory. Snapshots are read per render; each write bumps a
 		 * local tick so the card re-reads without an external-store hook adapter.
 		 */
 		function DescLangCard(props) {
 			var t = typeof props.t === "function" ? props.t : function (key) { return key; };
-
-			var openState = useState(false);
-			var open = openState[0];
-			var setOpen = openState[1];
 
 			var errorState = useState("");
 			var error = errorState[0];
@@ -927,8 +883,6 @@ window.__ModuleLoader__.load({
 				{ key: "out", label: t("chan.output"), modeKey: "outMode", localeKey: "outLocale", m: value.outMode || "off", loc: value.outLocale },
 			];
 
-			var Chevron = firstIcon(["IconChevronDownOutlineRegular", "IconChevronDownOutlineMedium", "IconChevronDownOutline14"]);
-
 			var modes = [
 				{ id: "auto", label: t("mode.auto") },
 				{ id: "force", label: t("mode.force") },
@@ -1013,11 +967,10 @@ window.__ModuleLoader__.load({
 				);
 			}
 
-			// dsh 0.1.6-alpha.2: the Plugins page renders this card through the
-			// `plugins.bundle.config` slot (keyed by the package name) with
-			// view="page" — the page draws the title itself, so the collapsible
-			// shell is only for the legacy Settings slot, which passes no view.
-			var pageView = props.view === "page";
+			// The Plugins page renders this card through the
+			// `plugins.bundle.config` slot with view="page" — the page draws
+			// the title itself, so the card is a flat section, not a collapsible
+			// list row.
 
 			// Audience (v0.8.0): teammates / subagents carry the same directive
 			// by default. An absent field means "never touched" ⇒ true; only an
@@ -1081,8 +1034,8 @@ window.__ModuleLoader__.load({
 					E("p", { className: "dl-hint" }, t("hint")),
 				);
 
-			if (pageView) return E("div", { className: "dl-card dl-pageCard" },
-				E("div", { className: "dl-header dl-headerFlat" },
+			return E("div", { className: "dl-card dl-pageCard" },
+				E("div", { className: "dl-header" },
 					E("span", { className: "dl-headText" },
 						E("span", { className: "dl-name" }, t("title")),
 						E("span", { className: "dl-desc" }, t("cardDesc")),
@@ -1091,23 +1044,6 @@ window.__ModuleLoader__.load({
 				bodyContent,
 			);
 
-			return E("li", { className: "dl-card" + (open ? " dl-open" : "") },
-				E("button", {
-					type: "button",
-					className: "dl-header",
-					"aria-expanded": open,
-					onClick: function () { setOpen(!open); },
-				},
-					E("span", { className: "dl-headText" },
-						E("span", { className: "dl-name" }, t("title")),
-						E("span", { className: "dl-desc" }, t("cardDesc")),
-					),
-					Chevron
-						? E(Chevron, { className: "dl-chevron" + (open ? " dl-chevronOpen" : "") })
-						: E("span", { className: "dl-chevron" + (open ? " dl-chevronOpen" : "") }, "▾"),
-				),
-				open ? bodyContent : null,
-			);
 		}
 
 		// ── plugin ────────────────────────────────────────────────────────────
@@ -1115,27 +1051,17 @@ window.__ModuleLoader__.load({
 		exports.name = "dsh-agent-lang/client";
 
 		/**
-		 * Required client services: the locale runtime and slots exist on every
-		 * host era. The settings face is acquired OPTIONALLY below - a hard inject
-		 * would leave this fiber PENDING forever on the era that dropped the
-		 * service (dsh 0.1.7 removed settingsScope), taking the card and the
-		 * reporter down together.
+		 * Required client services. `locale` supplies the dictionaries, `slots`
+		 * the bundle-config seat, and `configForms` the current settings surface
+		 * (always present on dsh >= 0.2.2-rc.1).
 		 */
-		exports.inject = ["locale", "slots"];
+		exports.inject = ["locale", "slots", "configForms"];
 
 		exports.apply = function (ctx) {
-			// Era-split settings face. Both candidates expose the SAME contract the
-			// card consumes - getSnapshot()/set(field, value)/unset(field) - because
-			// ConfigForm (dsh >= 0.1.7) kept the SettingsScope face when the service
-			// was replaced by the plugin-Config projection.
-			//
-			// OLD (<= 0.1.6): the client settingsScope service binds a namespace.
-			// NEW (>= 0.1.7): ui-settings configForms service serves one form per
-			// live profile entry; the form key is the row id - "agent-lang", the
-			// same string as the old namespace, and "locale" for the preference.
-			var scope = null;
-			var localeScope = null;
-			var wired = false;
+			// One ConfigForm per live profile entry: "agent-lang" for this
+			// plugin's settings, "locale" for the built-in language preference.
+			var scope = ctx.configForms.get(NS);
+			var localeScope = ctx.configForms.get(LOCALE_NS);
 
 			var lastReported;
 
@@ -1186,10 +1112,8 @@ window.__ModuleLoader__.load({
 				};
 			}, "dsh-agent-lang: styles, dictionaries");
 
-			/** Reporter + card wiring, once EITHER era settings face exists. */
+			/** Initial report, locale listener, and the settings card. */
 			function wire() {
-				if (wired || !scope) return;
-				wired = true;
 				try {
 					report(ctx.locale.getSnapshot());
 				} catch (error) {
@@ -1206,46 +1130,10 @@ window.__ModuleLoader__.load({
 				registerCards();
 			}
 
-			// OLD era (dsh <= 0.1.6): bound settings scopes. The optional inject
-			// never fires on dsh >= 0.1.7, where the service no longer exists.
-			try {
-				ctx.inject(["settingsScope"], function (sctx) {
-					try {
-						var svc = sctx && sctx.settingsScope;
-						if (!svc || typeof svc.bind !== "function") return;
-						scope = svc.bind({ namespace: NS });
-						localeScope = svc.bind({ namespace: LOCALE_NS });
-						wire();
-					} catch (error) {
-						console.warn(TAG + " settingsScope acquisition failed:", error && error.message ? error.message : error);
-					}
-				});
-			} catch (error) {
-				console.warn(TAG + " settingsScope wiring failed:", error && error.message ? error.message : error);
-			}
+			wire();
 
-			// NEW era (dsh >= 0.1.7): one ConfigForm per live profile entry; the
-			// form key is the row id, identical to the old namespace string.
-			try {
-				ctx.inject(["configForms"], function (fctx) {
-					try {
-						var forms = fctx && fctx.configForms;
-						if (!forms || typeof forms.get !== "function") return;
-						scope = forms.get(NS);
-						localeScope = forms.get(LOCALE_NS);
-						wire();
-					} catch (error) {
-						console.warn(TAG + " configForms acquisition failed:", error && error.message ? error.message : error);
-					}
-				});
-			} catch (error) {
-				console.warn(TAG + " configForms wiring failed:", error && error.message ? error.message : error);
-			}
-
-			/** Card registration (called by wire once a settings face exists). */
+		/** Register the single bundle-config seat. */
 			function registerCards() {
-				// Guarded registration (the dsh-better-workspace pattern): a thrown
-				// register degrades this one seat, never the plugin fiber.
 				// Guarded registration (the dsh-better-workspace pattern): a thrown
 				// register degrades this one seat, never the plugin fiber.
 				try {
@@ -1271,11 +1159,8 @@ window.__ModuleLoader__.load({
 							},
 						};
 					};
-					// dsh 0.1.6-alpha.2+: the Plugins page's bundle configuration
-					// seat, keyed by the PACKAGE name. This is the only settings
-					// seat now — the legacy settings-list card (pre-alpha.2) went
-					// away with the raised host floor. The inject waits for the
-					// slot's own declaration, so older hosts never grow it.
+					// The Plugins page's bundle configuration seat, keyed by the
+					// PACKAGE name. The inject waits for the slot's own declaration.
 					slots.inject("plugins.bundle.config", function () {
 						return slots.register({
 							name: "plugins.bundle.config",

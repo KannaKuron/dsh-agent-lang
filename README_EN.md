@@ -27,7 +27,7 @@ This plugin changes only the PROMPT side: one global dynamic runtime-context dir
 
 - **Detection order** (auto mode): the explicit Settings → General → Language choice > the browser-reported active locale. **English is a regular target too** (v0.3.0+): some models mix languages inside thinking/replies, and an explicit English directive pins them; only a fully undetected language injects nothing.
 - **Channel**: `systemPrompt.context()` — the same per-request runtime-context snapshot as the sandbox/approval policies, rendered near the end of each request so recency beats the English tool-schema guidance. A GUI language switch takes effect on the very next request.
-- **Settings card**: Settings → Plugins pairs Host-served namespaces with registered cards automatically; switch behavior (follow GUI language / force a BCP 47 tag — pick from the dropdown or type one, e.g. `zh`, `ja` / off) and inspect the detection chain.
+- **Settings card**: the Plugins panel → this plugin's bundle detail page hosts the card. It reads this plugin's row `Config` and the `locale` row through `configForms`; switch behavior (follow GUI language / force a BCP 47 tag — pick from the dropdown or type one, e.g. `zh`, `ja` / off) and inspect the detection chain.
 
 ## Install
 
@@ -40,36 +40,37 @@ Plain JS, no build step, no installed dependencies (schemastery is a peer resolv
 ## Verify
 
 1. Install, restart DSH, open the Web GUI (browser language or setting on Chinese);
-2. `~/.dsh/settings.yaml` gains a `agent-lang:` section (`uiLocale: zh`) once a page loaded;
+2. The current profile's `cordis.patch.yml` user layer gains `- id: agent-lang` and `config.uiLocale: zh` once a page loaded;
 3. Any new session: tool-call descriptions come out in Chinese;
 4. Switch the GUI language in Settings → General — descriptions switch on the next request;
-5. Settings → Plugins → Tool Description Language: pick `ja` from the force-language dropdown (or type any tag), switch off, etc.
+5. Plugins panel → this plugin's bundle detail page → Tool Description Language: pick `ja` from the force-language dropdown (or type any tag), switch off, etc.
 
 ## Version compatibility
 
-**dsh 0.1.7-rc.2 and rc.1 were checked item by item on a real isolated instance** (rc.2 record, per-surface zero-diff evidence and live evidence: CHANGELOG v0.7.1; rc.1: v0.7.0); the same holds for 0.1.6-alpha.1 (CHANGELOG v0.4.3):
+**Supports dsh >= 0.2.2-rc.1 only** (single-generation baseline since v0.13.0; stay on v0.12.1 for older hosts):
 
-- The `systemPrompt.context()` contract is unchanged: `PromptContext` is still `{ name, order, text }`, with order 125 (moved to 130 after the official table claimed 125, see v0.12.0) still after the official CONTEXT_ORDERS. The `interpolate: false` flag applies to **sections** only, which this plugin does not use.
-- The injected text carries no `{{...}}` interpolation risk: every language source (forced tag, explicit setting, browser report) passes BCP47 validation before it reaches the text.
-- The settings surface still splits at 0.1.7 (row `Config` + `configForms` above it, the registered namespace below), and the settings card still ships both seats: `settings.plugin.item` (hosts ≤ 0.1.6, where it silently waits on 0.1.7+) and `plugins.bundle.config` keyed by the package name (0.1.6-alpha.2+, live on 0.1.7).
-- The manifest declares the compatibility peer dsh 0.1.7-rc.1 enforces — `"@deepseek-ai/dsh": ">=0.1.0"` (optional, so package managers never auto-install a prerelease-only package). The declaration puts this plugin under the gate (it carried no such peer before, so it was never validated) while leaving the range open-ended: the plugin adapts to host changes by runtime detection, so a future dsh upgrade never disables it silently.
-- **Added for rc.2** (v0.7.1): rc.2 rolled out the unified design tokens across the client — corner radii `--dsw-radius-*` and the focus ring `--dsw-focus-ring-*` (the official sheet paints none under pointer modality). The card follows with "new token + old literal fallback", so hosts ≤ rc.1 render exactly as before. The same release fixes a silent defect present since the first version: the probed chevron name `IconChevronDownOutline14` does not exist on 0.1.7 (the family is `…OutlineRegular`/`…OutlineMedium`), so the card had always shown the text "▾"; it now probes a candidate chain.
+- There is one settings surface: the row `Config` (row id `agent-lang`) plus the client `configForms`. dsh 0.2.2 no longer has `settings.register(ns, schema)`, `settingsScope`, or `settings.get(ns)`, so no legacy probe remains.
+- Every `Config` field declares `.volatile()`; the browser half writes only `uiLocale`, while the card writes `mode` / `forceLocale` / `thinkMode` / `outMode` / `subagents`. `.volatile()` requires schemastery 3.19.0, so both peer and dev floors are `^3.19.0`.
+- The `systemPrompt.context()` contract is unchanged: `PromptContext` is still `{ name, order, text, interpolate }`, and order 130 sits between `TEAM_IDENTITY 125` and `HARNESS_SOURCE 200`. The injected text is BCP47-validated and sets `interpolate: false`, so `{{...}}` interpolation cannot apply.
+- Card chrome uses the official design tokens (radius / focus ring) directly, with no old-literal fallbacks; the page card itself has no collapsible header (its sections still fold with a text `▸`). All 21 dictionaries still ship.
+- The compatibility gate is decided solely by `engines.dsh >=0.2.2-rc.1` (`app-boot` ignores peers when `engines.dsh` exists); `peerDependencies["@deepseek-ai/dsh"]` mirrors it and stays optional so package managers never auto-install a prerelease-only host. No ceiling.
+- **Checked against 0.2.2-rc.1**: the official system-prompt only adds `TOOL_APPLY_PATCH: 1350` / `TOOL_SCHEDULE: 2500` in the tool section, leaving order 130 free; the single `plugins.bundle.config` seat, all 21 dictionaries, and live loading were verified.
 
-## Relation to dsh 0.2.1's "description first" wording (complementary, zero conflict)
+## Relation to dsh's description-first tool wording (complementary, zero conflict)
 
-Since dsh 0.2.1 the `bash` / `pwsh` tool schemas carry the "Provide `description` before `command` in the arguments" guidance, so the UI renders an arrived description already during a call's preparing phase (`run_code` front-loaded `description` in alpha.3–alpha.4 as well; alpha.5 reverted it to `code` first and dropped the sentence). This is orthogonal to this plugin and complementary:
+The `bash` / `pwsh` tool schemas carry the "Provide `description` before `command` in the arguments" guidance, so the UI renders an arrived description already during a call's preparing phase. This is orthogonal to this plugin and complementary:
 
 - **the host owns the order**: nudging the model to send the description first, so the preparing-phase card has a title to render;
 - **this plugin owns the language**: the same runtime-context directive decides which language those descriptions (preparing-phase titles included) are written in.
 
-The official English example wording in the schemas is unchanged, so the "Chinese UI, English descriptions" gap is still this plugin's description channel to close. Calls to new tools (0.2.1's `schedule_*` reminder tools included) are covered automatically: the channel is global and keys off the call's `description` argument, independent of tool-list churn. Re-verified against dsh 0.2.1-alpha.5: the `systemPrompt.context` signature is unchanged, and `CONTEXT_ORDERS` gained `TEAM_IDENTITY: 125` (0.2.1-alpha.3) — this plugin's slot moved from 125 to 130 (v0.12.0).
+The official English example wording in the schemas is unchanged, so the "Chinese UI, English descriptions" gap is still this plugin's description channel to close. The channel is global and keys off the call's `description` argument, independent of tool-list churn. Re-verified against dsh 0.2.2-rc.1: the `systemPrompt.context` signature and `CONTEXT_ORDERS` are unchanged, and order 130 sits between `TEAM_IDENTITY 125` and `HARNESS_SOURCE 200`.
 
 ## Known limits
 
 - `minimal` is sealed by design (see table).
 - Without a browser page (pure CLI deployments) only the explicit choice is detectable.
 - The GUI language is one global value; the most recently loaded page's report wins.
-- Subagents / workflow models see the directive too (their descriptions are user-facing as well).
+- Subagents / workflow models see the directive by default too (their descriptions are user-facing as well); the card's subagent switch can narrow it to the main agent only. Two boundaries: (1) a forked subagent inherits the main agent's committed prefix, and the switch does not rewrite that history; (2) external providers with their own prompt (codex / claude-code / acp / sdk) and `minimal`'s sealed prompt never pass through the host `systemPrompt`, so the switch does not affect them.
 
 ## License
 

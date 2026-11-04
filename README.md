@@ -23,24 +23,24 @@ DSH 里每一次工具调用的 `description` 参数都是必填的,而且**原�
 | 智能体团队队员 / 普通子代理(v0.8.0) | ✅ **默认生效** | 队员与子代理的请求同样带上指示;设置里可切「仅主代理」。**fork 出的队员**会继承主代理已完成回合的历史快照(含已提交的指示),开关不重写历史 |
 | `minimal`(极简模式) | ❌(设计如此) | minimal 的 persona 是 `complete: true` 且压制 runtime context,提示词对一切后挂贡献者封闭——任何提示级插件都无法进入,需要产品侧改动 |
 
-## 与 dsh 0.2.1 工具描述顺序指引的关系(互补,零冲突)
+## 与 dsh 工具描述顺序指引的关系(互补,零冲突)
 
-dsh 0.2.1 起,`bash` / `pwsh` 工具 schema 带着「Provide `description` before `command` in the arguments」指引,让 UI 在工具调用的**准备阶段**就渲染已到达的描述(`run_code` 在 alpha.3~alpha.4 曾同样把 `description` 排到最前,alpha.5 反转回 `code` 在前并删去对应指引句)。这与本插件正交且互补:
+dsh 的 `bash` / `pwsh` 工具 schema 带有「Provide `description` before `command` in the arguments」指引,让 UI 在工具调用的**准备阶段**就渲染已到达的描述。这与本插件正交且互补:
 
 - **官方管「顺序」**:引导模型先发 description,准备阶段的调用卡片就有标题可渲染;
 - **本插件管「语言」**:同一条 runtime-context 指示决定这些描述(含准备阶段标题)用什么语言书写。
 
-官方 schema 里的英文示例措辞没有变,「界面中文、描述英文」的落差依旧由本插件的描述通道补齐。新工具(如 0.2.1 的 `schedule_*` 提醒工具)的调用描述同样自动受控:通道是全局的,按工具调用的 `description` 参数生效,与工具清单增减无关。已对 dsh 0.2.1-alpha.5 复核:`systemPrompt.context` 签名零变化;`CONTEXT_ORDERS` 新增 `TEAM_IDENTITY: 125`(0.2.1-alpha.3),本插件槽位已随之从 125 迁至 130(v0.12.0)。
+官方 schema 里的英文示例措辞不变,「界面中文、描述英文」的落差依旧由本插件的描述通道补齐。通道是全局的,按工具调用的 `description` 参数生效,与工具清单增减无关。已对 dsh 0.2.2-rc.1 复核:`systemPrompt.context` 签名零变化;`CONTEXT_ORDERS` 未变,本插件 order 130 位于 `TEAM_IDENTITY 125` 之后、`HARNESS_SOURCE 200` 之前。
 
 ## 工作原理
 
 ```
 浏览器(GUI)                          DSH Host 进程
 ┌─────────────────────┐   上报当前界面语言   ┌──────────────────────────────┐
-│ locale 运行时        │ ─────────────────▶ │ settings ns「agent-lang」       │
+│ locale 运行时        │ ─────────────────▶ │ 行 Config「agent-lang」         │
 │ (显式选择,或浏览器    │  (只写 uiLocale 字段) │   .uiLocale  ← 浏览器上报     │
 │  navigator 匹配)     │                    │   .mode/.forceLocale ← 设置卡片 │
-└─────────────────────┘                    │ settings ns「locale」(只读)     │
+└─────────────────────┘                    │ 行 Config「locale」(只读)       │
                                            │   .preference ← 设置里的显式选择 │
                                            └──────────────┬───────────────┘
                                                           │ 每次请求组装时求值
@@ -52,7 +52,7 @@ dsh 0.2.1 起,`bash` / `pwsh` 工具 schema 带着「Provide `description` befor
 
 - **检测优先级**(auto 模式):设置 → 通用 → 语言里的**显式选择** > 浏览器上报的当前语言;**英文也是正常目标语言**(v0.3.0 起)——部分模型会在思考/输出里混杂多语言,显式英文指示同样能纠正;仅完全未检测到语言时不注入。
 - **注入通道**:`systemPrompt.context()` —— 与沙箱/审批策略同一个每轮刷新的 runtime-context 快照,渲染在请求末尾,近因盖过工具 schema 里的英文指引;**切换界面语言后下一轮请求即生效**,无需重启。
-- **设置卡片**:设置 → 插件 里出现本插件的卡片(与宿主已服务的设置命名空间自动配对),可切换行为:跟随界面语言 / 强制指定语言(下拉候选或自填 BCP 47 标签,如 `zh`、`ja`)/ 关闭,并显示当前检测链。
+- **设置卡片**:侧边栏「插件」面板 → 本插件 bundle 详情页里出现设置卡片;卡片经 `configForms` 读取本插件行 `Config` 与 `locale` 行,可切换行为:跟随界面语言 / 强制指定语言(下拉候选或自填 BCP 47 标签,如 `zh`、`ja`)/ 关闭,并显示当前检测链。
 
 ## 安装
 
@@ -61,7 +61,7 @@ dsh plugin --profile web add dsh-agent-lang   # npm 公开包
 # 源码与 Release: https://github.com/KannaKuron/dsh-agent-lang
 ```
 
-纯 JS、零构建、零安装依赖(schemastery 以 peer 声明,经 profile 共享解析),安装不触发构建脚本。装完重启 DSH,打开任意会话即可;设置 → 插件 里可找到「工具描述语言」卡片。
+纯 JS、零构建、零安装依赖(schemastery 以 peer 声明,经 profile 共享解析),安装不触发构建脚本。装完重启 DSH,打开任意会话即可;侧边栏「插件」面板 → 本插件 bundle 详情页可找到「工具描述语言」卡片。
 
 ### 本地开发版安装
 
@@ -75,29 +75,29 @@ pnpm add <tarball 路径>          # package.json 的 dsh.bundle.patch 声明会
 ## 验证
 
 1. 安装并重启 DSH,**硬刷新一次页面**(⌘/Ctrl+Shift+R,见「已知边界」第 1 条),打开 Web GUI(浏览器语言或设置选择为中文);
-2. `~/.dsh/settings.yaml` 出现 `agent-lang:` 段(`uiLocale: zh`,页面加载后);
+2. 当前 profile 的 `cordis.patch.yml` 用户层出现 `- id: agent-lang` 与 `config.uiLocale: zh`(页面加载后);
 3. 新建任意模式的会话,让模型跑几步工具调用——卡片描述应为中文;
 4. 设置 → 通用 → 语言 里切换语言,再发一条消息——下一轮请求描述即切换;
-5. 设置 → 插件 → 工具描述语言:切到「强制指定语言」,下拉选 `ja`(或自填标签),描述变日文;切「关闭」回到英文。
+5. 侧边栏「插件」面板 → 本插件 bundle 详情页 → 工具描述语言:切到「强制指定语言」,下拉选 `ja`(或自填标签),描述变日文;切「关闭」回到英文。
 
 ## 版本兼容
 
-**dsh 0.1.7-rc.2 与 rc.1 已在隔离实例上逐项复核通过**(rc.2 的核对记录、逐面零 diff 依据与真机证据见 CHANGELOG v0.7.1,rc.1 见 v0.7.0);0.1.6-alpha.1 的核对记录见 CHANGELOG v0.4.3:
+**仅支持 dsh >= 0.2.2-rc.1**(v0.13.0 起单代基线;旧版 dsh 请留在 v0.12.1):
 
-- `systemPrompt.context()` 契约未变:`PromptContext` 仍是 `{ name, order, text }`,order 125(0.2.1-alpha.3 官方占号后已迁 130,见 v0.12.0)仍在官方 CONTEXT_ORDERS 之后;`interpolate: false` 只作用于 **sections**,本插件不用。
-- 注入文本不存在 `{{...}}` 插值风险:三条语言来源(强制标签 / 设置里的显式选择 / 浏览器上报)全部经 BCP47 校验后才进入文本。
-- 设置面仍在 0.1.7 分界:0.1.7 起是「行 `Config` + `configForms`」,0.1.6 及以前是注册命名空间;设置卡两个座位照旧——`settings.plugin.item`(≤0.1.6 宿主;0.1.7 上无 owner,静默挂起)与 `plugins.bundle.config`(按包名 key,0.1.6-alpha.2 起,0.1.7 上实际生效)。
-- 插件清单声明了 dsh 0.1.7-rc.1 起强制执行的兼容 peer:`"@deepseek-ai/dsh": ">=0.1.0"`(标为 optional,避免包管理器把只有预发布版本的 `@deepseek-ai/dsh` 拉进安装)。该声明让本插件真正被兼容门禁覆盖(此前没有任何这类 peer,等于永不被校验),同时**不设上界**:插件靠运行时探测跨版本自愈,未来 dsh 升级不会被自动停用。
-- **0.2.2-rc.1 复核(v0.12.1)**:官方 system-prompt 只新增工具区段 order `TOOL_APPLY_PATCH: 1350` / `TOOL_SCHEDULE: 2500`,`CONTEXT_ORDERS` 未变,order 130 仍空闲;注册签名、设置座位与词典加载均无变化。
-- **rc.2 追加**(v0.7.1):rc.2 把统一设计令牌铺满客户端——圆角 `--dsw-radius-*` 与焦点环 `--dsw-focus-ring-*`(指针模态下官方不画环),本插件卡片已按「新令牌 + 旧字面量回退」跟进,≤rc.1 宿主渲染不变;同时修掉一个自首版起就存在的静默缺陷——chevron 探测的 `IconChevronDownOutline14` 在 0.1.7 里并不存在(官方家族是 `…OutlineRegular`/`…OutlineMedium`),卡片因此一直显示文字「▾」,现在改为候选链探测。
+- 设置面只有一条通道:行 `Config`(row id `agent-lang`)+ 客户端 `configForms`。0.2.2 已没有 `settings.register(ns, schema)` / `settingsScope` / `settings.get(ns)`,本插件不再保留旧时代探测。
+- `Config` 每个字段都声明 `.volatile()`;浏览器半只写 `uiLocale`,设置卡写 `mode` / `forceLocale` / `thinkMode` / `outMode` / `subagents`。`.volatile()` 需要 schemastery 3.19.0,peer/dev 下限均为 `^3.19.0`。
+- `systemPrompt.context()` 契约未变,`PromptContext` 仍是 `{ name, order, text, interpolate }`,order 130 位于 `TEAM_IDENTITY 125` 之后、`HARNESS_SOURCE 200` 之前;注入文本经 BCP47 校验并设 `interpolate: false`,不存在 `{{...}}` 插值风险。
+- 卡片 chrome 直接使用官方设计令牌(radius / focus ring),不再带旧字面量回退;页面卡本身无折叠头(卡内小节仍用文本 `▸` 折叠),词典仍为 21 门。
+- 兼容门禁由 `engines.dsh >=0.2.2-rc.1` 单独决定(`app-boot` 在存在 `engines.dsh` 时忽略 peer);`peerDependencies["@deepseek-ai/dsh"]` 同步声明并标 optional,避免包管理器把只有预发布版本的宿主拉进安装,同时**不设上界**。
+- **0.2.2-rc.1 复核**:官方 system-prompt 只在工具区段新增 `TOOL_APPLY_PATCH: 1350` / `TOOL_SCHEDULE: 2500`,`CONTEXT_ORDERS` 未变,order 130 仍空闲;单座位 `plugins.bundle.config`、21 门词典与真机加载均正常。
 
 ## 已知边界
 
-- **新装/更新后的首次启动需硬刷新一次**(2026-08-31 真机实测):首次页面加载可能赶上客户端模块表重建(combo revision 变化),新装包被暂时排除——表现为设置卡片未出现,但上报痕迹已经落盘(0.1.6 及以前在 `settings.yaml`,`0.1.7` 起在 profile 的 `cordis.patch.yml` 用户层:上报先于剔除发生)。硬刷新(⌘/Ctrl+Shift+R)即恢复;日常重启不复发。
+- **新装/更新后的首次启动需硬刷新一次**(2026-08-31 真机实测):首次页面加载可能赶上客户端模块表重建(combo revision 变化),新装包被暂时排除——表现为设置卡片未出现,但上报痕迹已经落盘(当前 profile 的 `cordis.patch.yml` 用户层:上报先于剔除发生)。硬刷新(⌘/Ctrl+Shift+R)即恢复;日常重启不复发。
 - **minimal 模式**:提示词封闭(见上表),不受本插件影响。
 - **无浏览器页面时**(如纯 CLI 部署):只有「显式选择」一条检测链;从未在设置里选过语言则不注入。
 - **多浏览器/远程页面**:界面语言是全局单值,后打开的页面上报会覆盖前者;非 loopback 页面的设置选择可能进程本地化(DSH 行为)。
-- 子代理 / workflow 的模型同样看到该指示(它们的描述也显示在 UI 里,语义一致)。
+- 子代理 / workflow 的模型默认同样看到该指示(它们的描述也显示在 UI 里,语义一致);卡片里的「子代理」开关可切成仅主代理。两条边界:① fork 出的子代理继承主代理已完成回合的快照,开关不重写历史;② 自带 prompt 的外部 provider(codex / claude-code / acp / sdk)与 `minimal` 的封闭 prompt 不经过宿主 `systemPrompt`,开关对它们无影响。
 
 ## 许可
 

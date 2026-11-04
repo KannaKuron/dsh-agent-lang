@@ -8,8 +8,8 @@
 # seeing this declaration, appends dsh-agent-lang to the bundle stack. The
 # profile boot then merges this patch (a single `insert` of the plugin row),
 # mounting the plugin globally on the HOST plane — which is the point: the
-# prompt section it registers applies to EVERY agent preset (standard, ptc,
-# cordis, user presets) in the process, not to one preset.
+# runtime-context contribution it registers applies to EVERY agent preset
+# (standard, ptc, cordis, user presets) in the process, not to one preset.
 #
 # If a profile already carries a manual mount line for this plugin in its own
 # cordis.patch.yml, remove it before switching to the bundle channel to avoid

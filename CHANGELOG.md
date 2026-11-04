@@ -3,6 +3,17 @@
 > 倒序排列,新版本条目在最上面。条目格式:`## vX.Y.Z — YYYY-MM-DD` + 类型(feat / fix / docs / chore)+ 要点 + 相关链接。
 > 纪律见 AGENTS.md「变更记录纪律」:发版前先更新本文件并随版本提交;事故复盘、复现与真机验证记录也记在这里。
 
+## v0.13.0 — 2026-11-05
+
+**类型**:breaking(单代基线:仅支持 dsh >= 0.2.2-rc.1;删除全部旧宿主兼容代码)
+
+- **兼容面收窄**:`engines.dsh` 与 `peerDependencies["@deepseek-ai/dsh"]` 同步抬到 `>=0.2.2-rc.1`(仍 optional、无上界)。0.2.2 起兼容门禁由 `engines.dsh` 单独决定;旧宿主留在 v0.12.1,不再进入本版本的运行时探测。
+- **设置面单代**:删除 `SETTINGS_NAMESPACE`、`live(schema)` 探测、`settings.register(ns, schema)` 旧分支与 `settingsScope` 可选注入。行 `Config` 全字段直接 `.volatile()`,host 半继续用顶层 await 惰性 import schemastery(静态 peer import 会让 Loader 静默跳过整行);schemastery 的 peer/dev 同步升到 `^3.19.0`(3.18.2 没有 `.volatile()`)。
+- **客户端单代**:硬注入 `locale` / `slots` / `configForms`,只走 `configForms.get('agent-lang')` 与 `get('locale')`;删除 settings 兼容分支、图标候选链、折叠头死分支与 `ui-primitives` require(当前只 require `react`)。
+- **样式**:直接使用官方 `--dsw-radius-*` 与统一焦点环令牌,删除旧字面量回退;页面卡本身始终平铺、无卡片级折叠头(卡内小节仍用文本 `▸` 折叠)。
+- **文档**:README(中英)改为「仅支持 dsh >=0.2.2-rc.1」单代说明;AGENTS 不变量 4/5/6/8/13/14 与验证清单同步。
+- 测试:47 项全绿;新增/改写 smoke 断言锁死单代设置面、require 仅 `react`、令牌无回退。
+
 ## v0.12.1 — 2026-11-04
 
 **类型**:chore(复核并声明 dsh 0.2.2-rc.1 兼容;零代码改动)

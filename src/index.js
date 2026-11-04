@@ -5,113 +5,55 @@
  * is the call's always-visible UI label — the bash `description` precedent,
  * and for PTC mode the `run_code` `description` (the call card's title).
  * The product's tool schemas describe that field with English wording and
- * English examples ("5-10 words … Examples: 'Count TODO markers…'"), so every
- * model defaults to English descriptions no matter what language the user's
- * GUI is showing. This plugin changes only the PROMPT side: it registers ONE
- * global dynamic runtime-context entry (`systemPrompt.context`) that states
- * the GUI's display language and instructs the model to write every
- * tool-call description in that language. No preset, persona, tool schema,
- * or shipped file is modified — those are deployment-owned assets an upgrade
- * overwrites anyway.
+ * English examples, so every model defaults to English descriptions no matter
+ * what language the user's GUI is showing. This plugin changes only the PROMPT
+ * side: it registers ONE global dynamic runtime-context entry
+ * (`systemPrompt.context`) that states the GUI's display language and
+ * instructs the model to write tool-call descriptions in that language. No
+ * preset, persona, tool schema, or shipped file is modified.
  *
- * WHY context() and not section(): the directive rides the same
- * per-request runtime-context snapshot as the sandbox/approval policies
- * (rendered near the END of each request, so recency works FOR overriding
- * the English tool-schema guidance that sits earlier in the prompt), and a
- * language switch in the GUI takes effect on the very next request because
- * the text provider is evaluated at every assembly.
+ * WHY context() and not section(): the directive rides the same per-request
+ * runtime-context snapshot as the sandbox/approval policies (rendered near the
+ * END of each request, so recency works FOR overriding the English tool-schema
+ * guidance that sits earlier in the prompt), and a language switch in the GUI
+ * takes effect on the very next request because the text provider is evaluated
+ * at every assembly.
  *
- * COVERAGE: the context is registered on the HOST plane, so every agent
- * preset that does not seal its own prompt merges it — the four built-ins
- * standard / ptc / cordis, user presets, and the presets materialized by
- * companion plugins (dsh-ptc-cordis-preset's ptc-cordis, the gitbash
- * variants from dsh-gitbash-shell). The one exception is by design:
- * `minimal` mounts a complete persona AND suppresses runtime context, so
- * its prompt is sealed against every late contributor — no prompt-level
- * plugin can reach it; that needs product-side change.
+ * COVERAGE: the context is registered on the HOST plane, so every agent preset
+ * that does not seal its own prompt merges it — the built-ins standard / ptc /
+ * cordis, user presets, and the presets materialized by companion plugins
+ * (dsh-ptc-cordis-preset's ptc-cordis, the gitbash variants from
+ * dsh-gitbash-shell). The one exception is by design: `minimal` mounts a
+ * complete persona AND suppresses runtime context, so its prompt is sealed
+ * against every late contributor — no prompt-level plugin can reach it; that
+ * needs product-side change.
  *
- * HOW the language is detected (priority order, resolved at EVERY
- * assembly — no re-registration, no restart):
+ * HOW the language is detected (priority order, resolved at EVERY assembly —
+ * no re-registration, no restart):
  *
  *   1. mode 'off'    → contribute nothing (escape hatch).
  *   2. mode 'force'  → the configured forceLocale.
  *   3. mode 'auto' (default):
- *        a. the durable `locale.preference` the built-in locale plugin
- *           owns (Settings → General → Language — the user's explicit
- *           choice, persisted by DSH itself on loopback pages); read-only
- *           here, NEVER written by this plugin;
- *        b. the `uiLocale` field of this plugin's OWN settings namespace
+ *        a. the durable `locale.preference` the built-in locale plugin owns
+ *           (Settings → General → Language — the user's explicit choice,
+ *           persisted by DSH itself on loopback pages); read-only here, NEVER
+ *           written by this plugin;
+ *        b. the `uiLocale` field of this plugin's OWN row Config
  *           (`agent-lang`), written by the browser half: it reports the
  *           locale runtime's ACTIVE locale, which covers the "user never
- *           picked a language" case (browser navigator match) that leaves
- *           no trace in Host settings;
+ *           picked a language" case (browser navigator match) that leaves no
+ *           trace in Host settings;
  *        c. neither → contribute nothing (English is already the default
  *           behavior; an English directive would only add prompt noise).
  *
- * The browser half (src/client.js) is the reporter AND the settings card:
- * it pushes the active locale into `agent-lang.uiLocale` and renders the
- * Settings card (legacy-era namespace registration)
- * that switches mode / forceLocale.
- *
- * SETTINGS, TWO ERAS (split at dsh 0.1.7):
- *
- *   OLD (<= 0.1.6): the settings service exposes `register(ns, schema)` and
- *   values persist in `$DSH_HOME/settings.yaml`. This half registers the
- *   `agent-lang` namespace with a CALLABLE schemastery schema (the service
- *   resolves values by calling `schema(merged)`; zod objects throw and the
- *   namespace is never served, which would also keep the card from
- *   dispatching). the namespace-branding helper that @deepseek-ai/dsh-settings
- *   helper is probed: newer dsh removed it and register() takes a plain
- *   string, older dsh accepts the branded form — one call shape satisfies
- *   every old host.
- *
- *   NEW (>= 0.1.7): `register()`/SettingsScope are gone. A plugin's settings
- *   ARE its row Config: this module statically exports `Config`, every field
- *   marked `.volatile()` (dsh 0.1.7 schemastery extension — probed, because
- *   the installed schemastery on a 0.1.6 host predates it), and the profile
- *   patch stores the values under the row id `agent-lang` — the same string
- *   as the old namespace, so the one-shot legacy `settings.yaml` import maps
- *   old user values straight onto the new home. apply() receives the fields
- *   as `Volatile<T>` refs (`.get()` reads a frozen snapshot; a host older
- *   than the extension passes plain values), and edits no longer remount
- *   this plugin — the directive's text closure re-evaluates per assembly, so
- *   a flipped knob lands on the very next request with zero wiring. The
- *   static schemastery import replaces the old dynamic one (the Loader needs
- *   `Config` at module import; resolution walks the profile's shared
- *   fallback exactly like the dynamic form did, and the smoke test now
- *   installs schemastery as a devDependency).
- *
- * The era split is a runtime probe (`typeof settings.register === 'function'`),
- * so one build serves both hosts.
+ * SETTINGS (dsh >= 0.2.2-rc.1): the row Config IS the only settings surface.
+ * The profile patch stores values under the row id `agent-lang`; fields
+ * arrive as Volatile refs and are read through `valueOf` at every assembly.
+ * The built-in locale preference is read from `settings.describe()`. The
+ * browser half reports the active locale into `uiLocale` and renders the
+ * Plugins-page bundle configuration card.
  */
 
-/**
- * The schemastery module, resolved LAZILY (v0.7.0): `@deepseek-ai/schemastery`
- * is a PEER, so it is not resolvable by plain Node from this package — it comes
- * from the host's own resolution (the profile shared fallback). A deployment
- * whose fallback lacks it used to fail the *static* import at the top of this
- * file, and the Loader treats a failed plugin import as a non-fatal skip
- * (`vendor/loader/src/config/entry.ts` `_init()`: logger.error + return, no
- * fiber) — so the row silently never mounted: no host half, no `dsh.client`
- * scan, no client bundle in the boot graph, and every host log stays green
- * (same all-green failure class as dsh-better-workspace issue #9; reproduced
- * with a fixture plugin whose only difference was a static peer import).
- * Deferring the import hides the schema where the module is absent instead of
- * killing the row: the prompt directive and the browser card keep working.
- */
-let Schema = null
-try {
-  Schema = (await import('@deepseek-ai/schemastery')).default
-} catch (error) {
-  Schema = null
-  console.warn(
-    '[dsh-agent-lang] @deepseek-ai/schemastery is not resolvable here; the row Config surface is absent'
-    + ' (the language directive and the browser card do not depend on it): '
-    + (error && error.message || String(error)),
-  )
-}
-
-/** Plugin identity for cordis.yml rows. */
 export const name = 'dsh-agent-lang'
 
 /**
@@ -120,9 +62,6 @@ export const name = 'dsh-agent-lang'
  * feature instead of blocking this plugin's load.
  */
 export const inject = []
-
-/** This plugin's own settings namespace (grammar: lowercase/digit/hyphen). */
-export const SETTINGS_NAMESPACE = 'agent-lang'
 
 
 /**
@@ -152,22 +91,28 @@ const BCP47 = /^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$/u
 const MODE_PATTERN = /^(auto|off|force)$/
 
 /**
- * dsh >= 0.1.7 schemastery marks a field live-editable without remount; a
- * 0.1.6-era schemastery predates the method, and the guard keeps this module
- * loadable there (the field then behaves as an ordinary config value).
- * @param {object} schema - one built schema node.
- * @returns {object} the same node, volatile when the host supports it.
+ * Deferred, NOT a static peer import: an unresolvable schemastery would make
+ * the Loader skip this whole row silently (no host half, no client bundle,
+ * every host log green). Keeping the import deferred lets the language
+ * directive still works when the row Config surface is absent. The browser
+ * card may then render as unavailable and the uiLocale report is best-effort;
+ * the Loader awaits this module, so `Config` is defined before read.
  */
-function live(schema) {
-  return typeof schema.volatile === 'function' ? schema.volatile() : schema
+let Schema = null
+try {
+  Schema = (await import('@deepseek-ai/schemastery')).default
+} catch (error) {
+  console.warn(
+    '[dsh-agent-lang] @deepseek-ai/schemastery is not resolvable here; the row Config surface is absent'
+    + ' (the language directive and the browser card do not depend on it): '
+    + (error && error.message || String(error)),
+  )
 }
 
 /**
- * Row Config = the settings surface on dsh >= 0.1.7 (the profile patch stores
- * the values under the row id `agent-lang`); inert metadata on older hosts,
- * whose values keep flowing through the registered settings namespace.
- * Field names and shapes are IDENTICAL to the old namespace schema, so the
- * legacy `settings.yaml` one-shot import and the client card map 1:1.
+ * Row Config = the settings surface on dsh >= 0.2.2-rc.1. The profile patch
+ * stores the values under the row id `agent-lang`; every editable field is
+ * declared volatile so a write lands without remounting the plugin.
  * Absent (undefined) when schemastery is unresolvable: cordis then passes the
  * row config through unvalidated and the card loses its form controls, instead
  * of the whole row disappearing.
@@ -175,31 +120,30 @@ function live(schema) {
 export const Config = Schema === null ? undefined : Schema.object({
   // Browser-reported active GUI locale; the client half writes ONLY this
   // field, so user-configured modes/locales survive every report.
-  uiLocale: live(Schema.string().pattern(BCP47).required(false)),
-  // ── channel: tool-call descriptions (the original fields; the
-  // backward-compatible read path maps these onto the desc channel).
-  mode: live(Schema.string().pattern(MODE_PATTERN).default('auto')),
-  forceLocale: live(Schema.string().pattern(BCP47).required(false)),
+  uiLocale: Schema.string().pattern(BCP47).required(false).volatile(),
+  // ── channel: tool-call descriptions (the original fields).
+  mode: Schema.string().pattern(MODE_PATTERN).default('auto').volatile(),
+  forceLocale: Schema.string().pattern(BCP47).required(false).volatile(),
   // ── channel: model thinking. Defaults OFF: reasoning language can affect
   // quality, so the model's natural behavior stays until the user opts in.
-  thinkMode: live(Schema.string().pattern(MODE_PATTERN).default('off')),
-  thinkLocale: live(Schema.string().pattern(BCP47).required(false)),
+  thinkMode: Schema.string().pattern(MODE_PATTERN).default('off').volatile(),
+  thinkLocale: Schema.string().pattern(BCP47).required(false).volatile(),
   // ── channel: user-facing replies. Defaults OFF: the untouched behavior is
   // "reply in the language the user typed in".
-  outMode: live(Schema.string().pattern(MODE_PATTERN).default('off')),
-  outLocale: live(Schema.string().pattern(BCP47).required(false)),
+  outMode: Schema.string().pattern(MODE_PATTERN).default('off').volatile(),
+  outLocale: Schema.string().pattern(BCP47).required(false).volatile(),
   // ── audience: do teammates / subagents carry the same directive?
   // Defaults TRUE (the user's decision, 2026-09-25): a teammate writing tool
   // descriptions in another language is exactly as visible in the UI as the
   // main agent doing it. `false` withholds the contribution from every child
   // agent (Agent Team members, `subagent`/`spawn_teammate` children at any
   // nesting depth) while the main agent keeps it.
-  subagents: live(Schema.boolean().default(true)),
+  subagents: Schema.boolean().default(true).volatile(),
 })
 
 /**
- * Read one Config value across eras: dsh >= 0.1.7 hands apply() a Volatile
- * ref (`.get()`), older hosts and fresh defaults pass plain values.
+ * Read one Config value: Config fields arrive as Volatile refs on dsh >=
+ * 0.2.2-rc.1; a Config=undefined row or a test fixture may pass a plain value.
  * @param {unknown} value - a resolved Config field.
  * @returns {unknown} the current plain value.
  */
@@ -435,7 +379,6 @@ function joinNames(items) {
 
 /** Test surface: constants and pure helpers for helper-level tests. */
 export const _internal = {
-  SETTINGS_NAMESPACE,
   LOCALE_NAMESPACE,
   CONTEXT_NAME,
   CONTEXT_ORDER,
@@ -456,20 +399,17 @@ export const _internal = {
 // ── plugin ──────────────────────────────────────────────────────────────────
 
 /**
- * Resolve this plugin's current settings across eras (pure helper factory).
+ * Resolve this plugin's current settings (pure helper factory).
  *
- * OLD (<= 0.1.6): values live in the registered settings namespace, read
- * through `settings.get(ns)`. NEW (>= 0.1.7): the row Config IS the surface —
- * `config` fields arrive as Volatile refs, read through `valueOf`. The
- * locale preference is a built-in namespace on old hosts and the `locale`
- * entry's Config form on new ones (`settings.describe()`), so the explicit
- * user choice keeps outranking the browser report on both.
+ * The row Config IS the surface: fields arrive as Volatile refs, read through
+ * `valueOf`. The locale preference is the `locale` entry's live Config form
+ * (`settings.describe()` projects every active entry; fresh on every call, no
+ * cache to go stale), so the explicit user choice outranks the browser report.
  * @param {object|null|undefined} config - apply()'s resolved Config.
- * @param {boolean} legacy - the apply()-time era probe (old settings service).
  * @returns {{ own: () => object, preference: (settings: unknown) => unknown }}
- *   era-aware readers for the directive's text closure.
+ *   readers for the directive's text closure.
  */
-function readersOf(config, legacy) {
+function readersOf(config) {
   const own = () => {
     if (!config || typeof config !== 'object') return {}
     return {
@@ -483,18 +423,9 @@ function readersOf(config, legacy) {
       subagents: valueOf(config.subagents),
     }
   }
-  /** The user's explicit language choice, read era-appropriately. */
+  /** The user's explicit language choice from the locale entry's Config form. */
   const preference = (settings) => {
     try {
-      if (legacy) {
-        // OLD: the built-in locale plugin's registered namespace.
-        const locale = settings?.get?.(LOCALE_NAMESPACE)
-        return locale?.preference
-      }
-      // NEW: the `locale` entry's live Config form (SettingsForms.describe
-      // projects every active entry; fresh on every call, no cache to go
-      // stale). A deployment without the settings service carries the
-      // browser report alone, exactly as before.
       if (!settings || typeof settings.describe !== 'function') return undefined
       const form = settings.describe().find((d) => d && d.ns === LOCALE_NAMESPACE)
       const value = form && form.value
@@ -511,7 +442,7 @@ function readersOf(config, legacy) {
  * (the bundle-patch row) the context entry is GLOBAL: every unsealed agent
  * preset in the process merges it into its per-request assembly.
  * @param {import('@deepseek-ai/cordis').Context} ctx - mounting context.
- * @param {object} [config] - resolved row Config (volatile refs on dsh >= 0.1.7).
+ * @param {object} [config] - resolved row Config (volatile refs on dsh >= 0.2.2-rc.1).
  */
 export function apply(ctx, config) {
   const log = ctx && ctx.logger && typeof ctx.logger.info === 'function'
@@ -519,76 +450,7 @@ export function apply(ctx, config) {
     : (msg) => console.log(msg)
   if (!ctx || typeof ctx.inject !== 'function') return
 
-  // Era probe: only the OLD settings service exposes register(); on dsh
-  // >= 0.1.7 the row Config above IS the namespace and there is nothing to
-  // register (values persist under the row id, `agent-lang`).
-  const legacySettings = (() => {
-    try {
-      const settings = ctx.get('settings')
-      return !!(settings && typeof settings.register === 'function')
-    } catch {
-      return false
-    }
-  })()
-
-  // ── OLD-era own settings namespace: the reporter's landing spot + the
-  // user's mode/forceLocale knobs. Served ONLY while this plugin lives; the
-  // Plugins tab pairs it with the browser card registered under the same key.
-  if (legacySettings) {
-    try {
-      ctx.inject(['settings'], (sctx) => {
-        // Dynamic import keeps resolution on the profile's shared fallback;
-        // the schema mirrors the row Config field-for-field.
-        import('@deepseek-ai/schemastery')
-          .then((sm) => {
-            const settings = sctx && sctx.settings
-            if (!settings || typeof settings.register !== 'function') return
-            const Schema = sm.default
-            // register() takes a plain string: the removed namespace-branding helper
-            // was compile-time branding and dsh removed it in 0.1.2-alpha.2,
-            // far below the 0.1.6-alpha.2 floor — no era probe left.
-            const ns = SETTINGS_NAMESPACE
-            const schema = Schema.object({
-              // Browser-reported active GUI locale; the client half writes
-              // ONLY this field, so user-configured modes/locales survive
-              // every report (settings writes are per-field deep merges).
-              uiLocale: Schema.string().pattern(BCP47).required(false),
-              // ── channel: tool-call descriptions (the original fields; the
-              // backward-compatible read path maps these onto the desc channel).
-              // auto = follow the detected GUI language; off = contribute
-              // nothing; force = always forceLocale.
-              mode: Schema.string().pattern(MODE_PATTERN).default('auto'),
-              forceLocale: Schema.string().pattern(BCP47).required(false),
-              // ── channel: model thinking. Defaults to OFF: reasoning language
-              // can affect quality, so the model's natural behavior stays until
-              // the user opts in.
-              thinkMode: Schema.string().pattern(MODE_PATTERN).default('off'),
-              thinkLocale: Schema.string().pattern(BCP47).required(false),
-              // ── channel: user-facing replies. Defaults to OFF: the untouched
-              // behavior is "reply in the language the user typed in".
-              outMode: Schema.string().pattern(MODE_PATTERN).default('off'),
-              outLocale: Schema.string().pattern(BCP47).required(false),
-              // ── audience: teammates / subagents carry the same directive.
-              // Defaults TRUE; false withholds it from every child agent.
-              subagents: Schema.boolean().default(true),
-            })
-            settings.register(ns, schema)
-            log(`${TAG} settings namespace registered: ${SETTINGS_NAMESPACE}`)
-          })
-          .catch((error) => {
-            log(`${TAG} settings namespace registration FAILED: ${error && error.stack || String(error)}`)
-          })
-      })
-    } catch (error) {
-      log(`${TAG} settings inject wiring failed: ${error?.message ?? error}`)
-    }
-  }
-
-  // Era-aware readers for the directive's text closure: the NEW era reads
-  // this plugin's own Config (volatile refs re-resolved per call — no
-  // listener needed, a flipped knob lands on the next request), the OLD era
-  // reads the registered namespace through the settings service.
-  const readers = readersOf(config, legacySettings)
+  const readers = readersOf(config)
 
   /**
    * Resolve the directive for ONE assembly; `isChild` selects the audience
@@ -609,12 +471,7 @@ export function apply(ctx, config) {
       // ctx.get('name'), which needs no inject declaration and returns
       // undefined only when the service is genuinely absent.
       const settings = sctx.get('settings')
-      // OLD era: values (own and the locale preference) come from the
-      // registered namespaces; NEW era: `own` reads the Config refs and the
-      // preference reads the locale entry's live form.
-      const own = legacySettings
-        ? settings?.get?.(SETTINGS_NAMESPACE) ?? {}
-        : readers.own()
+      const own = readers.own()
       // Three channels: descriptions (the original mode/forceLocale fields),
       // thinking, and replies — each independently auto/force/off; disabled
       // channels contribute nothing. The audience switch narrows children only.
@@ -648,11 +505,11 @@ export function apply(ctx, config) {
         pctx.effect(() => pctx.systemPrompt.context({
           name: CONTEXT_NAME,
           order: CONTEXT_ORDER,
-          // interpolate: false (dsh >= 0.2.1-alpha.2) renders the directive
-          // text literally: prompt-variable interpolation cannot misfire on
-          // it (an unknown {{...}} reference throws BEFORE the first model
-          // request and kills the turn — the BCP47 validation chain below
-          // stays as belt-and-braces). Older hosts ignore the unknown field.
+          // interpolate: false renders the directive text literally:
+          // prompt-variable interpolation cannot misfire on it (an unknown
+          // {{...}} reference throws BEFORE the first model request and kills
+          // the turn — the BCP47 validation chain below stays as
+          // belt-and-braces).
           interpolate: false,
           text: () => textFor(pctx, false),
         }), 'dsh-agent-lang: ui-language context')

@@ -7,7 +7,6 @@ import {
   _internal,
   name as pluginName,
   inject as pluginInject,
-  SETTINGS_NAMESPACE,
 } from '../src/index.js'
 
 const {
@@ -64,10 +63,9 @@ function tableKeys(source, declaration) {
 
 // ── plugin shape ─────────────────────────────────────────────────────────────
 
-test('plugin shape: name, no hard injects, namespace constants', () => {
+test('plugin shape: name, no hard injects, namespace constant', () => {
   assert.equal(pluginName, 'dsh-agent-lang')
   assert.deepEqual(pluginInject, [])
-  assert.equal(SETTINGS_NAMESPACE, 'agent-lang')
   assert.equal(LOCALE_NAMESPACE, 'locale')
 })
 
@@ -216,29 +214,34 @@ test('host half: the directive reads settings via ctx.get, never as an undeclare
   }
 })
 
-test('host half: lazy Config (dsh >= 0.1.7 settings) with volatile probing', () => {
-  // dsh 0.1.7: the row Config IS the settings surface. The Loader needs
-  // `Config` at module import, so the import is deferred with top-level await
-  // (the Loader awaits the module, so `Config` is defined before it is read) —
-  // a STATIC peer import would make an unresolvable schemastery kill the whole
-  // row silently (non-fatal skip in the Loader, client half never loads).
-  // `.volatile()` is probed so a 0.1.6-era schemastery still loads this module.
+test('host half: lazy Config with direct volatile fields', () => {
+  // The Loader needs `Config` at module import, so the import is deferred with
+  // top-level await (the Loader awaits the module, so `Config` is defined
+  // before it is read) — a STATIC peer import would make an unresolvable
+  // schemastery kill the whole row silently (non-fatal skip in the Loader,
+  // client half never loads). Every field is volatile so a write lands without
+  // remounting the plugin; there is no older schemastery to probe for.
   assert.match(hostSource, /await import\('@deepseek-ai\/schemastery'\)/)
   assert.doesNotMatch(hostSource, /^import Schema from '@deepseek-ai\/schemastery'/m)
   assert.match(hostSource, /export const Config = Schema === null \? undefined : Schema\.object\(/)
-  assert.match(hostSource, /typeof schema\.volatile === 'function' \? schema\.volatile\(\) : schema/)
-  // Volatile refs arrive on new hosts; both shapes must read the same way.
+  assert.match(hostSource, /uiLocale: Schema\.string\(\)\.pattern\(BCP47\)\.required\(false\)\.volatile\(\)/)
+  assert.match(hostSource, /mode: Schema\.string\(\)\.pattern\(MODE_PATTERN\)\.default\('auto'\)\.volatile\(\)/)
+  assert.match(hostSource, /subagents: Schema\.boolean\(\)\.default\(true\)\.volatile\(\)/)
+  assert.doesNotMatch(hostSource, /function live\(/)
+  assert.doesNotMatch(hostSource, /typeof schema\.volatile/)
+  // Volatile refs arrive from the row Config; defaults and fixtures may be
+  // plain values, and both shapes must read the same way.
   assert.match(hostSource, /export function valueOf\(value\)/)
 })
 
-test('host half: legacy namespace registration survives behind the era probe', () => {
-  // dsh <= 0.1.6 keeps the registered-namespace path, gated on the service
-  // still exposing register(). The settingsNamespace() era probe is gone:
-  // the helper left dsh in 0.1.2-alpha.2, far below the 0.1.6-alpha.2 floor,
-  // so register() always takes the plain namespace string.
+test('host half: the only settings surface is the row Config', () => {
+  // The old registered-namespace path is gone: dsh >=0.2.2-rc.1 serves the
+  // row Config as the settings surface, and SettingsScope reads the locale
+  // namespace through describe().
   assert.doesNotMatch(hostSource, /settingsNamespace/)
-  assert.match(hostSource, /settings\.register\(ns, schema\)/)
-  assert.match(hostSource, /typeof settings\.register === 'function'/)
+  assert.doesNotMatch(hostSource, /settings\.register\(ns, schema\)/)
+  assert.doesNotMatch(hostSource, /typeof settings\.register === 'function'/)
+  assert.match(hostSource, /settings\.describe\(\)/)
 })
 
 test('host half: reads the locale namespace but never writes it', () => {
@@ -323,11 +326,11 @@ test('host half: children get a SCOPED entry under the same name, installed per 
   assert.match(shadow, /text: \(\) => textFor\(sctx, true\)/)
 })
 
-test('host half: the audience switch is declared on BOTH settings eras, default on', () => {
-  // NEW era (row Config) and OLD era (registered namespace) must carry the
-  // same field, or the card would offer a switch one host cannot store.
+test('host half: the audience switch is declared once on the row Config, default on', () => {
+  // The row Config is the only settings surface on dsh >=0.2.2-rc.1; the
+  // card's switch and the directive read the same field.
   const occurrences = [...hostSource.matchAll(/subagents: (live\()?Schema\.boolean\(\)\.default\(true\)/g)]
-  assert.equal(occurrences.length, 2, 'expected the field on the row Config and the legacy namespace schema')
+  assert.equal(occurrences.length, 1, 'expected the field on the row Config only')
   assert.match(hostSource, /subagents: valueOf\(config\.subagents\)/)
   assert.match(hostSource, /enabled: subagentsEnabled\(own\.subagents\)/)
 })
@@ -345,8 +348,7 @@ test('client bundle: require whitelist is the client-module baseline', () => {
     '@deepseek-ai/cordis', '@deepseek-ai/dsh-client-store', '@deepseek-ai/dsh-client-ui-slots',
     '@deepseek-ai/dsh-client-ui-primitives'])
   for (const name of requires) assert.ok(baseline.has(name), `non-baseline require: ${name}`)
-  assert.ok(requires.includes('react'))
-  assert.ok(requires.includes('@deepseek-ai/dsh-client-ui-primitives'))
+  assert.deepEqual(requires, ['react'], 'the card no longer needs the primitive library')
 })
 
 test('client bundle: no import/JSX/TypeScript syntax', () => {
@@ -358,13 +360,12 @@ test('client bundle: no import/JSX/TypeScript syntax', () => {
 })
 
 test('client bundle: reports ONLY uiLocale into the agent-lang namespace', () => {
-  // Era-split acquisition: the OLD bound scope and the NEW ConfigForm face
-  // share the set/unset/getSnapshot contract; the plugin never hard-injects
-  // either service (a missing service would leave the fiber PENDING on the
-  // other era).
-  assert.doesNotMatch(clientSource, /exports\.inject = \["locale", "settingsScope"/)
-  assert.match(clientSource, /ctx\.inject\(\["settingsScope"\]/)
-  assert.match(clientSource, /ctx\.inject\(\["configForms"\]/)
+  // configForms is a required part of the settings surface on dsh >=0.2.2-rc.1,
+  // so it is a hard inject and both forms are read directly.
+  assert.match(clientSource, /exports\.inject = \["locale", "slots", "configForms"\]/)
+  assert.match(clientSource, /ctx\.configForms\.get\(NS\)/)
+  assert.match(clientSource, /ctx\.configForms\.get\(LOCALE_NS\)/)
+  assert.doesNotMatch(clientSource, /settingsScope/)
   assert.match(clientSource, /scope\.set\("uiLocale", active\)/)
   // never touches the built-in locale namespace with a write
   for (const banned of ['localeScope.set', 'localeScope.unset', 'localeScope.mutate']) {
@@ -383,15 +384,16 @@ test('client bundle: settings card keyed for the bundle page, dictionaries publi
   assert.match(clientSource, /ctx\.locale\.register\(DICT_NS, Object\.assign\(\{\}, LOCALE_ALIASES, LOCALES\)\)/)
 })
 
-test('client bundle: the Plugins-page settings seat across dsh generations (0.1.6-alpha.2+)', () => {
-  // Single seat now: the legacy settings-list card went away with the raised
-  // host floor, and the Plugins-page seat is keyed by the PACKAGE name — the
-  // page's configLedger matches on pkg.name, not on the settings namespace.
+test('client bundle: the Plugins-page settings seat', () => {
+  // Single seat: the Plugins-page bundle configuration slot is keyed by the
+  // PACKAGE name — the page's configLedger matches on pkg.name, not on a
+  // settings namespace.
   assert.match(clientSource, /slots\.inject\("plugins\.bundle\.config"/)
   assert.match(clientSource, /key: "dsh-agent-lang"/)
-  // The page seat passes view="page" and the component drops its collapsible
-  // shell there.
-  assert.match(clientSource, /props\.view === "page"/)
+  // The bundle page renders a flat page card; there is no collapsible shell
+  // to keep for the removed legacy settings-list seat.
+  assert.match(clientSource, /dl-card dl-pageCard/)
+  assert.doesNotMatch(clientSource, /props\.view === "page"/)
 })
 
 test('client bundle: force-language options merge registered locale packs over the static fallback', () => {
@@ -464,42 +466,37 @@ test('client bundle: the bundle parses (a dictionary typo would blank the card)'
   assert.doesNotThrow(() => { new Function(clientSource) })
 })
 
-test('client bundle: card chrome consumes the 0.1.7-rc.2 design tokens with literal fallbacks', () => {
-  // rc.2 shipped the unified token layer this card follows: the radius scale
+test('client bundle: card chrome consumes the design tokens directly', () => {
+  // The token layer ships with dsh >=0.2.2-rc.1: the radius scale
   // (ui-theme styles/base.css `--dsw-radius-*`) and the one focus ring
   // (ui-theme styles/focus.css `--dsw-focus-ring-width` +
   // `--dsw-focus-ring-color`, which also blanks the colour under pointer
-  // modality). Each var() names the literal this file used before, so a host
-  // that predates the tokens keeps rendering what it rendered then — the tokens
-  // are an upgrade, never a requirement.
-  assert.match(clientSource, /var\(--dsw-radius-md,12px\)/)
-  assert.match(clientSource, /var\(--dsw-radius-sm,8px\)/)
-  assert.match(clientSource, /var\(--dsw-focus-ring-width,2px\) solid var\(--dsw-focus-ring-color,/)
+  // modality). No pre-token literal fallbacks remain.
+  assert.match(clientSource, /var\(--dsw-radius-md\)/)
+  assert.match(clientSource, /var\(--dsw-radius-sm\)/)
+  assert.match(clientSource, /var\(--dsw-focus-ring-width\) solid var\(--dsw-focus-ring-color\)/)
   // the pre-token spellings must be gone from the rules themselves (a stale
   // hardcoded radius would silently win over the token nothing else applies)
   assert.doesNotMatch(clientSource, /border-radius:12px/)
   assert.doesNotMatch(clientSource, /border-radius:8px/)
   assert.doesNotMatch(clientSource, /outline:2px solid/)
-  // the last fallback stays the pre-rc.2 brand colour: state-business-primary
-  // is the newest name in the chain and need not exist on <= 0.1.6 hosts
-  assert.match(clientSource, /var\(--dsw-alias-state-business-primary,var\(--dsw-alias-brand-primary\)\)/)
 })
 
-test('client bundle: the chevron probes the real glyph names, not a spelling no host exports', () => {
-  // v0.1.0..v0.7.0 asked for `IconChevronDownOutline14`, which NO 0.1.7 build
-  // exports (the family is `…OutlineRegular` / `…OutlineMedium`), so the card
-  // silently rendered the text "▾" while the probe looked correct. The chain
-  // keeps a real icon wherever a host ships one and the text glyph otherwise.
-  assert.match(clientSource, /function firstIcon\(names\)/)
-  assert.match(clientSource, /firstIcon\(\["IconChevronDownOutlineRegular", "IconChevronDownOutlineMedium", "IconChevronDownOutline14"\]\)/)
-  const probe = clientSource.slice(clientSource.indexOf('var Chevron ='))
-  assert.doesNotMatch(probe.slice(0, probe.indexOf('\n')), /icon\("IconChevronDownOutline14"\)$/, 'the probe must not bet on the legacy name alone')
+test('client bundle: no legacy glyph probe survives', () => {
+  // The page card itself has no chevron (inner sections fold with a text ▸);
+  // the old `IconChevronDownOutline14` probe (never an exported name) and its
+  // fallback helper are gone.
+  assert.doesNotMatch(clientSource, /firstIcon|IconChevronDownOutline|Outline14/)
+  // The dead icon() lookup referenced the removed ui binding; keep it from
+  // creeping back now that the card renders no glyph at all.
+  assert.doesNotMatch(clientSource, /function icon\(/)
+  assert.doesNotMatch(clientSource, /ui && ui\[/)
 })
 
 test('client bundle: the audience switch renders default-on and writes a boolean', () => {
   // The card reads an absent field as ON (nobody who never touched it may end
-  // up narrowing coverage) and writes real booleans, which the new-era Config
-  // (`Schema.boolean()`) and the legacy namespace schema both accept.
+  // up narrowing coverage) and writes real booleans, which the row Config
+  // (`Schema.boolean()`) accepts.
   assert.match(clientSource, /var subOn = !\(value\.subagents === false \|\| value\.subagents === "false"\)/)
   assert.match(clientSource, /write\(\{ subagents: true \}\)/)
   assert.match(clientSource, /write\(\{ subagents: false \}\)/)
@@ -589,42 +586,29 @@ test('package manifest: client entry + dsh.client declaration', () => {
   assert.ok(!pkg.dependencies, 'runtime deps are peers resolved through the profile, not installed')
 })
 
-test('package manifest: declares the dsh peer the 0.1.7+ compatibility gate reads', () => {
-  // dsh 0.1.7-rc.1 added the ONLY enforced plugin-compatibility mechanism
-  // (packages/boot/app-boot/src/plugin-compatibility.ts): every
-  // peerDependencies entry named `@deepseek-ai/dsh` or `@deepseek-ai/dsh-*`
-  // is compared — prereleases participating — against the running dsh
-  // version, and a mismatch silently removes the plugin (bundle layer
-  // skipped, row disabled). A manifest with no such peer is never validated,
-  // so the range is part of the contract and this test pins it:
-  //   floor `>=0.1.6-alpha.2` = the oldest host this build serves: the first
-  //                      one with the Plugins panel's bundle-config seat (the
-  //                      only settings card seat now; 0.1.6 never shipped a
-  //                      stable). Old era <= 0.1.6 registers the namespace,
-  //                      new era >= 0.1.7 rides the row Config;
-  //   NO ceiling. This plugin survives host changes by RUNTIME detection (the
-  //   dual-era probes), and the family rule is that an upgrading user must not
-  //   lose the plugin to a version the gate merely *guesses* is incompatible:
-  //   an upper bound would disable every family plugin on the next dsh line
-  //   before anyone observed a real break. When a future line does break a
-  //   contract, the adapting release tightens this range together with the
-  //   code fix.
-  // Not an enumerated version list either: the ecosystem's counter-example is
-  // dsh-any-background@0.3.0, whose `... || 0.1.7-alpha.1` enumeration dropped
-  // it on 0.1.7-rc.1 and forced per-machine exemptions.
+test('package manifest: declares the 0.2.2-rc.1 compatibility floor', () => {
+  // packages/boot/app-boot/src/plugin-compatibility.ts reads an own
+  // `engines.dsh` range ALONE (peerDependencies are ignored when it exists),
+  // with prereleases participating; a mismatch silently removes the plugin
+  // (bundle layer skipped, row disabled). The peer stays in lockstep as the
+  // install-time statement, and this test pins both:
+  //   floor `>=0.2.2-rc.1` = the one host line this build supports: the row
+  //                      Config is the only settings surface and configForms is
+  //                      the only client settings face;
+  //   NO ceiling. The family rule is that an upgrading user must not lose the
+  //   plugin to a version the gate merely guesses is incompatible; when a
+  //   future line breaks a contract, the adapting release tightens this range
+  //   together with the code fix.
   const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
-  assert.equal(pkg.peerDependencies['@deepseek-ai/dsh'], '>=0.1.6-alpha.2')
-  assert.match(pkg.engines.dsh, /^>=0\.1\.6-alpha\.2$/, 'peer floor and engines.dsh must tell one compatibility story')
-  // OPTIONAL, and it has to stay optional: the gate reads peerDependencies
-  // only (`plugin-compatibility.ts` touches no other field, and dsh's runtime
-  // reads `peerDependenciesMeta` nowhere at all), while a package manager with
-  // autoInstallPeers (pnpm's default) would try to RESOLVE the range against
-  // the registry. Every published @deepseek-ai/dsh version is a prerelease,
-  // and a plain range excludes prereleases, so an auto-installing client fails
-  // the whole install with ERR_PNPM_NO_MATCHING_VERSION / ERESOLVE. Optional
-  // peers are not auto-installed, which removes the hazard without weakening
-  // the gate (verified live: a manifest whose peer reads 999.0.0 is still
-  // dropped even while the optional flag is set).
+  assert.equal(pkg.peerDependencies['@deepseek-ai/dsh'], '>=0.2.2-rc.1')
+  assert.match(pkg.engines.dsh, /^>=0\.2\.2-rc\.1$/, 'peer floor and engines.dsh must tell one compatibility story')
+  // OPTIONAL, and it has to stay optional: a package manager with
+  // autoInstallPeers (pnpm's default) would try to RESOLVE the peer range
+  // against the registry. Every published @deepseek-ai/dsh version is a
+  // prerelease, and a plain range excludes prereleases, so an auto-installing
+  // client fails the whole install with ERR_PNPM_NO_MATCHING_VERSION /
+  // ERESOLVE. Optional peers are not auto-installed, which removes the hazard
+  // without weakening the engines.dsh gate.
   assert.equal(pkg.peerDependenciesMeta?.['@deepseek-ai/dsh']?.optional, true)
 })
 
@@ -643,10 +627,9 @@ test('plugin manifest and bundle patch reference the plugin row', () => {
   assert.match(patch, /name: 'dsh-agent-lang'/)
 })
 
-test('package meta: dsh 0.1.7 plugin-manager display assets', () => {
-  // dsh 0.1.7 renders a bundle's localized title/description from
-  // `./locale/<tag>.json` exports plus a top-level `icon`; older hosts read
-  // none of it (inert extras), so one build serves every era.
+test('package meta: plugin-manager display assets', () => {
+  // dsh renders a bundle's localized title/description from
+  // `./locale/<tag>.json` exports plus a top-level `icon`.
   // `exports["./package.json"]` is load-bearing, not cosmetic: the Electron
   // renderer discovers a client package through
   // `createRequire(baseUrl).resolve("<pkg>/package.json")`
