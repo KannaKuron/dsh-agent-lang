@@ -3,6 +3,15 @@
 > 倒序排列,新版本条目在最上面。条目格式:`## vX.Y.Z — YYYY-MM-DD` + 类型(feat / fix / docs / chore)+ 要点 + 相关链接。
 > 纪律见 AGENTS.md「变更记录纪律」:发版前先更新本文件并随版本提交;事故复盘、复现与真机验证记录也记在这里。
 
+## v0.12.1 — 2026-11-04
+
+**类型**:chore(复核并声明 dsh 0.2.2-rc.1 兼容;零代码改动)
+
+- **复核**:0.2.1-alpha.5 → 0.2.2-rc.1 的 system-prompt 只在工具区段新增 `TOOL_APPLY_PATCH: 1350` 与 `TOOL_SCHEDULE: 2500`;现有 `CONTEXT_ORDERS`(WORKING_DIRECTORY 100 … TEAM_IDENTITY 125、HARNESS_SOURCE 200、WEB_SURFACE 210)零变化,本插件的 context order 130 仍落在空闲区,不撞号。
+- `systemPrompt.context()` 签名、`PromptContext.interpolate`、`plugins.bundle.config` / `configForms` 设置座位均无契约变化;21 门词典与客户端卡片照常加载。
+- **真机**:dsh 0.2.2-rc.1 隔离实例里插件正常加载,插件页显示「语言控制」,设置卡可打开;无控制台错误。
+- 测试:47 项全绿。peer 下限保持 `>=0.1.6-alpha.2`,不设上界。
+
 ## v0.12.0 — 2026-10-17
 
 **类型**:feat(跟进 dsh 0.2.1-alpha.3..5:`CONTEXT_ORDER` 125 → 130 迁移;附带 docs 更正)。
