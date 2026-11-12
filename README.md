@@ -30,7 +30,7 @@ dsh 的 `bash` / `pwsh` 工具 schema 带有「Provide `description` before `com
 - **官方管「顺序」**:引导模型先发 description,准备阶段的调用卡片就有标题可渲染;
 - **本插件管「语言」**:同一条 runtime-context 指示决定这些描述(含准备阶段标题)用什么语言书写。
 
-官方 schema 里的英文示例措辞不变,「界面中文、描述英文」的落差依旧由本插件的描述通道补齐。通道是全局的,按工具调用的 `description` 参数生效,与工具清单增减无关。已对 dsh 0.2.2-rc.1 复核:`systemPrompt.context` 签名零变化;`CONTEXT_ORDERS` 未变,本插件 order 130 位于 `TEAM_IDENTITY 125` 之后、`HARNESS_SOURCE 200` 之前。
+官方 schema 里的英文示例措辞不变,「界面中文、描述英文」的落差依旧由本插件的描述通道补齐。通道是全局的,按工具调用的 `description` 参数生效,与工具清单增减无关。已对 dsh 0.2.2-rc.2 复核:`systemPrompt.context` 签名零变化;`CONTEXT_ORDERS` 删除了 `TEAM_IDENTITY 125`,本插件 order 130 位于 `SUBAGENT_DELEGATION 120` 之后、`HARNESS_SOURCE 200` 之前。
 
 ## 工作原理
 
@@ -86,10 +86,11 @@ pnpm add <tarball 路径>          # package.json 的 dsh.bundle.patch 声明会
 
 - 设置面只有一条通道:行 `Config`(row id `agent-lang`)+ 客户端 `configForms`。0.2.2 已没有 `settings.register(ns, schema)` / `settingsScope` / `settings.get(ns)`,本插件不再保留旧时代探测。
 - `Config` 每个字段都声明 `.volatile()`;浏览器半只写 `uiLocale`,设置卡写 `mode` / `forceLocale` / `thinkMode` / `outMode` / `subagents`。`.volatile()` 需要 schemastery 3.19.0,peer/dev 下限均为 `^3.19.0`。
-- `systemPrompt.context()` 契约未变,`PromptContext` 仍是 `{ name, order, text, interpolate }`,order 130 位于 `TEAM_IDENTITY 125` 之后、`HARNESS_SOURCE 200` 之前;注入文本经 BCP47 校验并设 `interpolate: false`,不存在 `{{...}}` 插值风险。
+- `systemPrompt.context()` 契约未变,`PromptContext` 仍是 `{ name, order, text, interpolate }`,order 130 位于 `SUBAGENT_DELEGATION 120` 之后、`HARNESS_SOURCE 200` 之前(rc.2 删除了 `TEAM_IDENTITY 125`);注入文本经 BCP47 校验并设 `interpolate: false`,不存在 `{{...}}` 插值风险。
 - 卡片 chrome 直接使用官方设计令牌(radius / focus ring),不再带旧字面量回退;页面卡本身无折叠头(卡内小节仍用文本 `▸` 折叠),词典仍为 21 门。
 - 兼容门禁由 `engines.dsh >=0.2.2-rc.1` 单独决定(`app-boot` 在存在 `engines.dsh` 时忽略 peer);`peerDependencies["@deepseek-ai/dsh"]` 同步声明并标 optional,避免包管理器把只有预发布版本的宿主拉进安装,同时**不设上界**。
 - **0.2.2-rc.1 复核**:官方 system-prompt 只在工具区段新增 `TOOL_APPLY_PATCH: 1350` / `TOOL_SCHEDULE: 2500`,`CONTEXT_ORDERS` 未变,order 130 仍空闲;单座位 `plugins.bundle.config`、21 门词典与真机加载均正常。
+- **0.2.2-rc.2 复核**:`CONTEXT_ORDERS` 删除 `TEAM_IDENTITY: 125`,order 130 仍位于 `SUBAGENT_DELEGATION 120` 之后、`HARNESS_SOURCE 200` 之前;`systemPrompt.context` 契约、单座位设置卡与 21 门词典无变化;`npm test` 47/47。
 
 ## 已知边界
 

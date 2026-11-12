@@ -71,8 +71,9 @@ test('plugin shape: name, no hard injects, namespace constant', () => {
 
 test('context placement: free slot after the centrally allocated orders', () => {
   assert.equal(CONTEXT_NAME, 'agent-lang:ui-language')
-  // After SANDBOX_POLICY(110)/APPROVAL_POLICY(115)/SUBAGENT_DELEGATION(120)
-  // and TEAM_IDENTITY(125, allocated by dsh 0.2.1-alpha.3).
+  // After SANDBOX_POLICY(110)/APPROVAL_POLICY(115)/SUBAGENT_DELEGATION(120).
+  // dsh 0.2.1-alpha.3 allocated TEAM_IDENTITY(125); dsh 0.2.2-rc.2 removed it,
+  // so 130 stays free after 120.
   assert.equal(CONTEXT_ORDER, 130)
 })
 

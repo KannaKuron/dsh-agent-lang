@@ -3,6 +3,14 @@
 > 倒序排列,新版本条目在最上面。条目格式:`## vX.Y.Z — YYYY-MM-DD` + 类型(feat / fix / docs / chore)+ 要点 + 相关链接。
 > 纪律见 AGENTS.md「变更记录纪律」:发版前先更新本文件并随版本提交;事故复盘、复现与真机验证记录也记在这里。
 
+## v0.14.0 — 2026-11-12
+
+**类型**:chore(复核 dsh 0.2.2-rc.2,无代码改动)
+
+- **CONTEXT_ORDERS 变化**:dsh 0.2.2-rc.2 删除了 `TEAM_IDENTITY: 125`,本插件 order 130 仍空闲,位于 `SUBAGENT_DELEGATION 120` 之后、`HARNESS_SOURCE 200` 之前;仅同步 README / README_EN / AGENTS 与源码注释中的邻区表述。
+- **契约复核**:`systemPrompt.context` 签名、单座位 `plugins.bundle.config`、21 门词典与 `configForms.get('agent-lang')` / `get('locale')` 均无变化;无功能改动。
+- **验证**:`npm test` 47/47 pass;`node --check src/index.js` 通过。
+
 ## v0.13.0 — 2026-11-05
 
 **类型**:breaking(单代基线:仅支持 dsh >= 0.2.2-rc.1;删除全部旧宿主兼容代码)
